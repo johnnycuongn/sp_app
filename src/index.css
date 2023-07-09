@@ -1,3 +1,6 @@
+:root {
+  --main-color: #36394c
+}
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -10,4 +13,74 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+.background-main {
+  background-color: var(--main-color) !important;
+}
+
+.color-main {
+  color: var(--main-color) !important;
+}
+
+
+.error {
+  color: red;
+
+  border: 1px solid red;
+  border-radius: 5px;
+
+  padding: 5px;
+}
+
+.btn-submit {
+  background-color: var(--main-color);
+  color: white;
+
+  border: 1px solid;
+  border-radius: 5px;
+
+  /* width: 100%; */
+  height: 40px;
+
+  transition: all 200ms;
+}
+
+.btn-submit.hover:hover {
+  background-color: transparent;
+  color:  rgb(42, 42, 164);
+
+  border-color:  rgb(42, 42, 164);
+}
+
+.btn-delete {
+  background-color: red;
+  color: white;
+
+  width: 100%;
+  height: 40px;
+}
+
+.btn-delete:hover {
+  background-color: transparent;
+  border-color: red;
+
+  color: red
+}
+
+.grid-item {
+  border: 1px solid gainsboro;
+  border-radius: 4px;
+
+  height: 100px;
+
+  padding: 8px;
+
+  transition: all 0.1s;
+
+  cursor: pointer;
+}
+
+.grid-item:hover {
+  background-color: gainsboro;
 }

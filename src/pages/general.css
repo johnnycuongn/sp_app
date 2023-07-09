@@ -1,0 +1,10 @@
+.clear-hover {
+  background-color: transparent;
+
+  border: 1px solid gainsboro;
+  border-radius: 8px;
+}
+
+.clear-hover:hover {
+  background-color: gainsboro;
+}

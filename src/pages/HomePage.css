@@ -1,0 +1,41 @@
+label.dropdown {
+  font-size: small;
+  color: grey;
+}
+
+.horizontal-scrollable-container {
+  display: flex;
+  flex-direction: row;
+
+  overflow-y:hidden;
+  overflow-x: scroll;
+}
+
+.range-item {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  width: 100px;
+  height: 40px;
+
+  border: 1px solid gainsboro;
+  border-radius: 5px;
+
+  padding: 6px;
+  margin-right: 10px;
+
+  background-color: rgb(153, 165, 226);
+
+  cursor: pointer;
+  transition: all 0.2s ;
+}
+
+.range-item.highlight {
+  color: gainsboro;
+  background-color: rgb(41, 49, 92);
+}
+
+.range-item:hover {
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+}
