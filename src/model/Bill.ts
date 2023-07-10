@@ -1,5 +1,5 @@
 import { DocumentData, Query, QueryConstraint, QuerySnapshot, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc, updateDoc, where, writeBatch } from "firebase/firestore"
-import { billRef, billsColRef, db, storage, storageBillsRef, storageOneBillRef } from "../services/firebase/index"
+import { auth, billRef, billsColRef, db, storage, storageBillsRef, storageOneBillRef } from "../services/firebase/index"
 import { isStringValid } from "../utils/isValid"
 import { removeEmpty } from "../utils/object"
 import { BankModelInterface, BillModelInterface, BillViewModelInterface, SupplierModelInterface } from "./model"
@@ -19,6 +19,7 @@ export class Bill {
    * Need to run `_initialize()` at the begining/useEffect first run to use the property, else receive empty
    */
   public static banks: BankModelInterface[] = []
+  
 
   /**
    * If you are using Bill class in a component and want lastest data, please use this function to initialize `suppliers` and `banks`
@@ -60,6 +61,22 @@ export class Bill {
 
     // Process
     delete postData.id
+
+    const validUser = postData.user_id && isStringValid(postData.user_id)
+    if (!validUser) {
+      if (auth.currentUser) {
+        postData.user_id = auth.currentUser.uid
+      } else {
+        throw new Error(`Invalid user when adding new bill. Date: ${new Date()}`)
+      }
+    }
+
+    postData.meta = {
+      created_at: new Date(),
+      updated_at: new Date()
+    }
+
+    // - End Process
     
     if (postData.payment_type === 'cash' && isStringValid(postData.payment_bank_id)) {
       delete postData.payment_bank_id
@@ -128,6 +145,11 @@ export class Bill {
     console.log('Updating bill', billId);
 
     if (bill.id) delete bill.id
+    bill.meta = {
+      created_at: bill.meta && bill.meta.created_at ? bill.meta.created_at : new Date(),
+      updated_at: new Date()
+    }
+
 
     const updatedBill = {
       ...bill
@@ -231,12 +253,17 @@ export class Bill {
     let billObj: BillModelInterface = {
       id: id ?? '',
       supplier_id: docData.supplier_id ?? '',
+      user_id: docData.user_id ?? '',
       payment_date: docData.payment_date.toDate(),
       total_payment: docData.total_payment ?? 0,
       payment_status: docData.payment_status,
       payment_type: docData.payment_type,
       payment_bank_id: docData.payment_bank_id ?? '',
-      files_ref: docData.files_ref as string[] ?? []
+      files_ref: docData.files_ref as string[] ?? [],
+      meta: docData.meta && {
+        created_at: docData.meta.created_at.toDate(),
+        updated_at: docData.meta.created_at.toDate()
+      }
     }
 
     return billObj
@@ -282,6 +309,9 @@ export class Bill {
 
 }
 
+/**
+ * Validate bill passed from Page
+ */
 function validateBill(bill: BillModelInterface, requireID: boolean = false, requireSupplier: boolean = false) {
   const validId = bill.id && isStringValid(bill.id) 
   if (requireID) {

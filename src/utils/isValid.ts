@@ -5,7 +5,11 @@ export function isNumeric(str: string) {
 }
 
 /**
- * Valid when string is not empty
+ * Valid when string is:
+ * 
+ * - A type of string
+ * - Not empty
+ * - Not whitespace only
  */
 export function isStringValid(str?: string | any):boolean {
   if (str) {

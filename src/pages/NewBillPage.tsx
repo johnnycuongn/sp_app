@@ -24,6 +24,7 @@ export default function NewBillPage() {
   const [bill, setBill] = useState<BillModelInterface>({
     id: '',
     supplier_id: '',
+    user_id: '',
     payment_date: new Date(),
     total_payment: 0,
     payment_status: 'paid',
