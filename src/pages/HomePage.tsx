@@ -10,7 +10,6 @@ import { isStringValid } from "../utils/isValid";
 import { generateReport, getQuarterDates } from "./HomePage.report";
 import { numberWithCommas } from "../utils/number";
 
-const YEAR_INITIAL = 2020
 
 interface BillTableViewModel extends BillModelInterface {
   id?: string
@@ -19,12 +18,12 @@ interface BillTableViewModel extends BillModelInterface {
 }
 
 const getMonthRangeOptions = (year: number) => getMonthsOfYear(year)
-const getYearOptions = () => {
+const getYearOptions = (yearInitial: number) => {
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
   const years = [];
   
-  for (let i = currentYear; i >= YEAR_INITIAL; i--) {
+  for (let i = currentYear; i >= yearInitial; i--) {
     years.push(i);
   }
 
@@ -88,38 +87,6 @@ export default function HomePage() {
     console.log(location.state);
     init()
   }, [])
-
-  // useEffect(() => {
-  //   console.log('Year changed useEffect');
-  //   console.log('object');
-  //   updateReport()
-  // }, [yearSelection])
-
-  // useEffect(() => {
-  //   console.log('object on changed', yearSelection, rangeSelection, selectedRangeItemIndex);
-  //   let billsUpdated = billsAtYear.filter((bill) => {
-  //     if (rangeSelection === 'month') {
-  //       const date = new Date(yearSelection, selectedRangeItemIndex, 1);
-  //       let startDateOfMonth = new Date(date.getFullYear(), date.getMonth(), 1, 0, 0,0);
-  //       let endDateOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59);
-
-  //       return bill.payment_date > startDateOfMonth && bill.payment_date < endDateOfMonth
-  //     } else if (rangeSelection === 'quarter') {
-  //       const {start: startDateOfQuarter, end: endDateOfQuarter } = getQuarterDates(yearSelection, selectedRangeItemIndex)
-  //       return bill.payment_date > startDateOfQuarter && bill.payment_date < endDateOfQuarter
-  //     }
-
-  //     return true
-  //   })
-
-  //   setBills(() => [...billsUpdated])
-  //   console.log('Bills updated', billsUpdated);
-
-  //   updateReport()
-  // }, [rangeSelection, selectedRangeItemIndex, JSON.stringify(billsAtYear)])
-
-
-
 
   const init = async () => {
     setPageState((s) => {return {...s, reportLoading: true}})
@@ -217,9 +184,6 @@ export default function HomePage() {
     await updateReport2(yearSelection, rangeSelection, index, billsForAYear)
   }
 
-  const updateReportInformation = (rangeItemSelectedIndex: number) => {
-  }
-
   return (
     <div className="p-3">
       <h2>Bill Dashboard</h2>
@@ -230,7 +194,7 @@ export default function HomePage() {
             {yearSelection}
           </button>
           <div className="dropdown-menu">
-            {getYearOptions().map((year) => {
+            {getYearOptions(Bill.YEAR_INITAL).map((year) => {
               return <button className="dropdown-item" type="button" onClick={() => handleYearSelectionChanged(year)}>{year}</button>
             })}
           </div>

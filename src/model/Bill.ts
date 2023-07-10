@@ -1,4 +1,4 @@
-import { DocumentData, Query, QueryConstraint, QuerySnapshot, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc, updateDoc, where, writeBatch } from "firebase/firestore"
+import { DocumentData, Query, QueryConstraint, QuerySnapshot, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, setDoc, updateDoc, where, writeBatch } from "firebase/firestore"
 import { auth, billRef, billsColRef, db, storage, storageBillsRef, storageOneBillRef } from "../services/firebase/index"
 import { isStringValid } from "../utils/isValid"
 import { removeEmpty } from "../utils/object"
@@ -20,6 +20,7 @@ export class Bill {
    */
   public static banks: BankModelInterface[] = []
   
+  public static YEAR_INITAL: number = 2023
 
   /**
    * If you are using Bill class in a component and want lastest data, please use this function to initialize `suppliers` and `banks`
@@ -35,6 +36,13 @@ export class Bill {
       this.banks = banks.length === 0 ? await Bank.getAll() : banks;
     } else {
       this.banks = await Bank.getAll()
+    }
+
+    const year_query = query(billsColRef, where("payment_date", "<=", new Date()), orderBy("payment_date", 'asc'), limit(1));
+    const billDocsSnapshot = await getDocs(year_query)
+    const bills = this.fromFirebaseSnapshot(billDocsSnapshot)
+    if (bills.length !== 0) {
+      this.YEAR_INITAL = bills[0].payment_date.getFullYear()
     }
   }
 
