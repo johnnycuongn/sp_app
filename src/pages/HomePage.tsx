@@ -17,43 +17,7 @@ interface BillTableViewModel extends BillModelInterface {
   bankName?: string
 }
 
-const getMonthRangeOptions = (year: number) => getMonthsOfYear(year)
-const getYearOptions = (yearInitial: number) => {
-  const currentDate = new Date();
-  const currentYear = currentDate.getFullYear();
-  const years = [];
-  
-  for (let i = currentYear; i >= yearInitial; i--) {
-    years.push(i);
-  }
 
-  return years
-}
-
-const getQuarterOptions = (year: number) => {
-  const currentDate = new Date();
-  let currentQuarter = getQuarterFor(11)
-
-  const currentYear = currentDate.getFullYear();
-  if (currentYear === year) {
-    const currentMonth = currentDate.getMonth();
-    currentQuarter = getQuarterFor(currentMonth)
-  } else {
-    currentQuarter = getQuarterFor(11)
-  }
-  
-  const quarters = [];
-
-  for (let i = 0; i <= currentQuarter; i++) {
-    quarters.push(`${year} Q${i + 1}`);
-  }
-
-  return quarters
-
-  console.log(quarters);
-}
-
-type RangeOption = 'month' | 'quarter' | 'year'
 
 export default function HomePage() {
 
@@ -101,6 +65,8 @@ export default function HomePage() {
 
   /**
    * @param bills bills for current year. Usually `billsAtYear` or new updated bills
+   * 
+   * @Note `All @param` Don't pass in state value, unless it is not changed within same function
    */
   const updateReport2 = async (year: number, range: RangeOption, rangeItemIndex: number, bills: BillViewModelInterface[]) => {
     console.log('UpdateReport2', bills);
@@ -299,3 +265,41 @@ export default function HomePage() {
     </div>
   )
 }
+
+const getMonthRangeOptions = (year: number) => getMonthsOfYear(year)
+const getYearOptions = (yearInitial: number) => {
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const years = [];
+  
+  for (let i = currentYear; i >= yearInitial; i--) {
+    years.push(i);
+  }
+
+  return years
+}
+
+const getQuarterOptions = (year: number) => {
+  const currentDate = new Date();
+  let currentQuarter = getQuarterFor(11)
+
+  const currentYear = currentDate.getFullYear();
+  if (currentYear === year) {
+    const currentMonth = currentDate.getMonth();
+    currentQuarter = getQuarterFor(currentMonth)
+  } else {
+    currentQuarter = getQuarterFor(11)
+  }
+  
+  const quarters = [];
+
+  for (let i = 0; i <= currentQuarter; i++) {
+    quarters.push(`${year} Q${i + 1}`);
+  }
+
+  return quarters
+
+  console.log(quarters);
+}
+
+type RangeOption = 'month' | 'quarter' | 'year'
