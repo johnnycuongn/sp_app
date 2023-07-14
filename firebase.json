@@ -20,7 +20,8 @@
     }
   ],
   "hosting": {
-    "public": "public",
+    "site": "sinhphu",
+    "public": "build",
     "ignore": [
       "firebase.json",
       "**/.*",

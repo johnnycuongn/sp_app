@@ -321,7 +321,7 @@ export class Bill {
 /**
  * Validate bill passed from Page
  */
-function validateBill(bill: BillModelInterface, requireID: boolean = false, requireSupplier: boolean = false) {
+function validateBill(bill: BillModelInterface, requireID: boolean = false, requireSupplier: boolean = true) {
   const validId = bill.id && isStringValid(bill.id) 
   if (requireID) {
     if (!validId) throw new Error('Require Bill Id')
@@ -330,6 +330,10 @@ function validateBill(bill: BillModelInterface, requireID: boolean = false, requ
   const validSupplier = bill.supplier_id && isStringValid(bill.supplier_id)
   if (requireSupplier) {
     if (!validSupplier) throw new Error('Require Supplier for Bill')
+  }
+
+  if (!isStringValid(bill.outlet_id)) {
+    throw new Error('Unable to add outlet to bill.')
   }
 
   if (bill.payment_type === 'bank' && !isStringValid(bill.payment_bank_id)) {

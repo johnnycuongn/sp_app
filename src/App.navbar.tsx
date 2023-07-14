@@ -121,11 +121,11 @@ export default function AppNavigationBar() {
               Payment
             </Button>
             <Button
-              key="Payment"
+              key="Outlet"
               onClick={handleOutletClicked}
               sx={{ my: 2, color: 'white', display: 'block' }}
             >
-              Payment
+              Outlet
             </Button>
           </Box>
 
@@ -227,7 +227,7 @@ function SmallScreenNav({
           <MenuItem key="payment" onClick={onPaymentClick}>
             <Typography textAlign="center">Payment</Typography>
           </MenuItem>
-          <MenuItem key="payment" onClick={onOutletClick}>
+          <MenuItem key="outlet" onClick={onOutletClick}>
             <Typography textAlign="center">Outlet</Typography>
           </MenuItem>
         </Menu>
