@@ -158,8 +158,8 @@ export default function OutletPage() {
         maxWidth='lg'
         PaperProps={{
           sx: {
-            width: "50%",
-            minHeight: "60vh"
+            // width: "50%",
+            // minHeight: "60vh"
           }
         }}
       >

@@ -183,8 +183,7 @@ export default function SupplierPage() {
         maxWidth='lg'
         PaperProps={{
           sx: {
-            width: "50%",
-            minHeight: "60vh"
+            // minHeight: "60vh"
           }
         }}
       >
