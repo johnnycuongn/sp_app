@@ -1,22 +1,37 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import './general.css'
 
 import { Grid, Paper, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, IconButton, Menu, CircularProgress, LinearProgress } from "@mui/material";
 import { Error as ErrorIcon } from '@mui/icons-material';
+import CreatableSelect from 'react-select/creatable';
 
-import { Supplier, SupplierModelInterface } from "../model";
+import { Supplier, SupplierMain, SupplierModelInterface } from "../model";
 import { isStringValid } from "../utils/isValid";
 
 export default function SupplierPage() {
 
 
-  const [supplier, setSupplier] = useState<SupplierModelInterface>({name: '', description: ''})
+  const [supplier, setSupplier] = useState<SupplierModelInterface>({name: '', description: '', category: ''})
   const [suppliers, setSuppliers] = useState<SupplierModelInterface[]>([])
+
+  const [categories, setCategories] = useState<string[]>([])
+  const categoriesOptions: Option[] = useMemo(() => {
+    return categories.map((c,i) => {
+      return {
+        id: `${i}`,
+        label: c,
+        value: c
+      }
+    })
+  }, [JSON.stringify(categories)])
+  const [selectedCategory, setSelectedCategory] = useState<string | null>('')
 
   const [pageState, setPageState] = React.useState({
     supplierModalOpen: false,
     modalLoading: false,
     modalErrorText: '',
+
+    categoriesSelectLoading: false
   });
 
   useEffect(() => {
@@ -26,12 +41,29 @@ export default function SupplierPage() {
 
   async function init() {
     await getAllSuppliers()
+    const categoriesData = await SupplierMain.getCategories()
+    setCategories(categoriesData)
   }
 
   const getAllSuppliers = async () => {
     const data = await Supplier.getAll()
 
     setSuppliers(() => [...data])
+  }
+
+  const handleCreateCategory = async (inputValue: string) => {
+    setPageState(o => {return {...o, categoriesSelectLoading: true}})
+    // const newOption = createOption(inputValue);
+    console.log('Input value categort', inputValue);
+    // await SupplierMain.updateCategories([...categories, inputValue])
+    
+    // const new_categories = await SupplierMain.getCategories()
+    // setCategories(new_categories)
+    setSelectedCategory(inputValue)
+
+
+    setPageState(o => {return {...o, categoriesSelectLoading: false}})
+
   }
 
   const handleCreateSupplier = async () => {
@@ -85,7 +117,7 @@ export default function SupplierPage() {
   const handleCreatedSupplierModal = async (state: 'open' | 'close', supplierId?: string) => {
     if (state === 'close') {
       setPageState((state) => { return {...state, supplierModalOpen: false, modalLoading: false, modalErrorText: '' }})
-      setSupplier({ name: '', description: ''})
+      setSupplier({ name: '', description: '', category: ''})
     }
     else {
       setPageState((state) => { return {...state, supplierModalOpen: true }})
@@ -149,6 +181,12 @@ export default function SupplierPage() {
         open={pageState.supplierModalOpen}
         onClose={() => handleCreatedSupplierModal('close')}
         maxWidth='lg'
+        PaperProps={{
+          sx: {
+            width: "50%",
+            minHeight: "60vh"
+          }
+        }}
       >
         <DialogTitle>
           { supplier.id ? 'Supplier Information' : 'Add new supplier'}
@@ -176,6 +214,15 @@ export default function SupplierPage() {
               })
             }}
           />
+          {/* <CreatableSelect 
+            isClearable
+            isDisabled={pageState.categoriesSelectLoading}
+            isLoading={pageState.categoriesSelectLoading}
+            onChange={(newValue) => setSelectedCategory(newValue)}
+            onCreateOption={handleCreateCategory}
+            options={categoriesOptions}
+            value={selectedCategory}
+          /> */}
           {isStringValid(pageState.modalErrorText) && 
             <div className="error">
               <ErrorIcon className="me-1" />
@@ -236,3 +283,15 @@ export default function SupplierPage() {
     </div>
   )
 }
+
+interface Option {
+  readonly id: string;
+  readonly label: string;
+  readonly value: string;
+}
+
+
+const createOption = (label: string) => ({
+  label,
+  value: label.toLowerCase().replace(/\W/g, ''),
+});

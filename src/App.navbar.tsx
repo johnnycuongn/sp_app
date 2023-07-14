@@ -55,6 +55,11 @@ export default function AppNavigationBar() {
     navigate('/payment')
     handleCloseNavMenu()
   }
+  
+  const handleOutletClicked = () => {
+    navigate('/outlet')
+    handleCloseNavMenu()
+  }
 
   const handleUserAccountClicked = () => {
     navigate('/user')
@@ -90,6 +95,7 @@ export default function AppNavigationBar() {
             onDashboardClick={handleDashboardClicked}
             onSupplierClick={handleSupplierClicked}
             onPaymentClick={handlePaymentClicked}
+            onOutletClick={handleOutletClicked}
             admin={isAdmin}
           />
           <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
@@ -110,6 +116,13 @@ export default function AppNavigationBar() {
             <Button
               key="Payment"
               onClick={handlePaymentClicked}
+              sx={{ my: 2, color: 'white', display: 'block' }}
+            >
+              Payment
+            </Button>
+            <Button
+              key="Payment"
+              onClick={handleOutletClicked}
               sx={{ my: 2, color: 'white', display: 'block' }}
             >
               Payment
@@ -160,6 +173,7 @@ interface SmallScreenNavProps {
   onDashboardClick: () => void
   onSupplierClick: () => void
   onPaymentClick: () => void
+  onOutletClick: () => void
   admin: boolean
 }
 
@@ -170,6 +184,7 @@ function SmallScreenNav({
   onDashboardClick,
   onSupplierClick,
   onPaymentClick,
+  onOutletClick,
   admin,
 }: SmallScreenNavProps) {
   return (
@@ -211,6 +226,9 @@ function SmallScreenNav({
           </MenuItem>
           <MenuItem key="payment" onClick={onPaymentClick}>
             <Typography textAlign="center">Payment</Typography>
+          </MenuItem>
+          <MenuItem key="payment" onClick={onOutletClick}>
+            <Typography textAlign="center">Outlet</Typography>
           </MenuItem>
         </Menu>
       </Box>

@@ -6,6 +6,7 @@ import HomePage from "./pages/HomePage";
 import SupplierPage from "./pages/SupplierPage";
 import PaymentPage from "./pages/PaymentPage";
 import NewBillPage from "./pages/NewBillPage";
+import OutletPage from "./pages/OutletPage";
 
 
 export default function AppRoutes() {
@@ -27,6 +28,7 @@ export default function AppRoutes() {
           </Route>
           <Route path="/supplier" element={<SupplierPage />} />
           <Route path="/payment" element={<PaymentPage />}/>
+          <Route path="/outlet" element={<OutletPage />}/>
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

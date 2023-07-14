@@ -2,7 +2,7 @@ import { QueryDocumentSnapshot, deleteDoc, doc, getDoc, getDocs, updateDoc, writ
 import { db, supplierRef, suppliersColRef } from "../services/firebase"
 import { isStringValid } from "../utils/isValid"
 import { removeEmpty } from "../utils/object"
-import { SupplierModelInterface } from "./model"
+import { SupplierModelInterface, SupplierModelMainDocInterface } from "./model"
 
 export class Supplier {
 
@@ -74,9 +74,54 @@ export class Supplier {
     let supplierObj: SupplierModelInterface = {
       id: id ?? '',
       name: data.name ?? '',
-      description: data.description ?? ''
+      description: data.description ?? '',
+      category: ""
     }
 
     return supplierObj
+  }
+}
+
+export class SupplierMain {
+  private static MAIN_ID = "_MAIN_SUPPLIER"
+  private static MAIN_DOC = doc(db, "suppliers_data", this.MAIN_ID)
+
+  static async getMain(): Promise<SupplierModelMainDocInterface> {
+    const docSnap = await getDoc(this.MAIN_DOC)
+
+    if (!docSnap.exists()) {
+      const new_data: SupplierModelMainDocInterface = {
+        categories: []
+      }
+      await this.setMain(new_data)
+      return new_data
+    }
+
+    const data = docSnap.data()
+
+    return {
+      categories: data.categories ?? []
+    }
+  }
+
+  private static async setMain(main_data: SupplierModelMainDocInterface) {
+    const batch = writeBatch(db)
+
+    batch.set(this.MAIN_DOC, main_data)
+
+    await batch.commit()
+  }
+
+  static async getCategories(): Promise<string[]> {
+    const data = await this.getMain()
+    console.log('Get categories', data);
+    return data.categories
+  }
+
+  static async updateCategories(categories: string[]) {
+
+    await updateDoc(this.MAIN_DOC, {
+      categories: categories
+    })
   }
 }

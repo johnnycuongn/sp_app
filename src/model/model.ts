@@ -15,6 +15,7 @@ export interface BillModelInterface {
   id?: string
   supplier_id: string
   user_id: string
+  outlet_id: string
   payment_date: Date
   total_payment: number
   payment_status: PaymentStatus
@@ -47,4 +48,16 @@ export interface SupplierModelInterface {
   id?: string
   name: string
   description: string
+  category: string
+}
+
+export interface OutletModelInterface {
+  id?: string
+  name: string
+  description: string
+  default_bank_id: string
+}
+
+export interface SupplierModelMainDocInterface {
+  categories: string[]
 }

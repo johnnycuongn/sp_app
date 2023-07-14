@@ -5,9 +5,10 @@ import Select from 'react-select'
 import './NewBillPage.css'
 import { Error as ErrorIcon } from '@mui/icons-material';
 
-import { BankModelInterface, Bill, BillModelInterface, PAYMENT_STATUSES, PAYMENT_TYPES, PaymentStatus, PaymentType, SupplierModelInterface } from "../model";
+import { BankModelInterface, Bill, BillModelInterface, Outlet, OutletModelInterface, PAYMENT_STATUSES, PAYMENT_TYPES, PaymentStatus, PaymentType, SupplierModelInterface } from "../model";
 import { isNumeric, isStringValid } from "../utils/isValid";
 import { uppercaseFirst } from "../utils/string";
+import { mapBankToSelectOptions } from "./helper/helper";
 
 
 export default function NewBillPage() {
@@ -25,6 +26,7 @@ export default function NewBillPage() {
     id: '',
     supplier_id: '',
     user_id: '',
+    outlet_id: '',
     payment_date: new Date(),
     total_payment: 0,
     payment_status: 'paid',
@@ -35,6 +37,7 @@ export default function NewBillPage() {
 
   const [suppliers, setSuppliers] = useState<SupplierModelInterface[]>([])
   const [banks, setBanks] = useState<BankModelInterface[]>([])
+  const [outlets, setOutlets] = useState<OutletModelInterface[]>([])
 
   const [selectedFilesContent, setSelectedFilesContent] = useState<(string)[]>([])
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -74,6 +77,9 @@ export default function NewBillPage() {
     // get all banks
     const banksData = await Bill.banks
     setBanks(() => [...banksData])
+
+    const outletData = await Outlet.getAll()
+    setOutlets(() => [...outletData])
 
     if (isUpdating) {
       const updatingBill = await Bill.get(id!)
@@ -211,6 +217,26 @@ export default function NewBillPage() {
       />
     </div>
     <div className="input-box">
+      <label>Outlet</label>
+      <Select className="select"
+        isDisabled={isUpdating && Boolean(outlets.find((s => s.id === bill.outlet_id)))}
+        value={mapOutletsToSelectOptions(outlets).filter(option => option.outlet_id === bill.outlet_id)[0]} 
+        options={mapOutletsToSelectOptions(outlets)} 
+        onChange={(option) => {
+          
+          if (option && outlets.find(el => el.id === option.outlet_id) ) {
+            const outlet = outlets.find(el => el.id === option.outlet_id)!
+            setBill(o => {return {...o, supplier_id: option.outlet_id}}) 
+
+            if (outlet.default_bank_id) {
+              setBill(o => {return {...o, payment_type:'bank', payment_bank_id: outlet.default_bank_id}})
+            }
+            
+          }
+        }} 
+      />
+    </div>
+    <div className="input-box">
       <label>Payment Type</label>
       <MUISelect
         defaultValue={'cash'}
@@ -297,7 +323,7 @@ export default function NewBillPage() {
         {pageState.errorText}
       </div>
     }
-    <button className="btn btn-submit hover mt-2"
+    <button className="btn btn-submit hover w-100 mt-2"
       disabled={pageState.loading || !isBillAddable}
       hidden={pageState.loading}
       onClick={async () => {
@@ -320,6 +346,20 @@ export default function NewBillPage() {
   </div>)
 }
 
+function mapOutletsToSelectOptions(outlets: OutletModelInterface[]): {
+  outlet_id: string,
+  value: string,
+  label: string
+}[] {
+  return outlets.map((outlet) => {
+    return {
+      outlet_id: outlet.id ?? '',
+      value: outlet.id ?? '',
+      label: outlet.name
+    }
+  })
+}
+
 function mapSuppliersToSelectOptions(suppliers: SupplierModelInterface[]): {
   supplier_id: string,
   value: string,
@@ -331,21 +371,6 @@ function mapSuppliersToSelectOptions(suppliers: SupplierModelInterface[]): {
       supplier_id: supplier.id ?? '',
       value: supplier.id ?? '',
       label: supplier.name
-    }
-  })
-}
-
-function mapBankToSelectOptions(banks: BankModelInterface[]): {
-  bank_id: string,
-  value: string,
-  label: string
-}[] {
-  return banks.map((bank) => {
-
-    return {
-      bank_id: bank.id ?? '',
-      value: bank.id ?? '',
-      label: bank.name
     }
   })
 }

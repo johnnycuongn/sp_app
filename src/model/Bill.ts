@@ -262,6 +262,7 @@ export class Bill {
       id: id ?? '',
       supplier_id: docData.supplier_id ?? '',
       user_id: docData.user_id ?? '',
+      outlet_id: docData.outlet_id ?? '',
       payment_date: docData.payment_date.toDate(),
       total_payment: docData.total_payment ?? 0,
       payment_status: docData.payment_status,
