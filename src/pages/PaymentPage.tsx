@@ -137,7 +137,7 @@ export default function PaymentPage() {
                 }}
               >
                 <Stack className="flex-grow-1">
-                  <span>{bank.name}</span>
+                  <h6 style={{borderBottom: '0.1px solid gainsboro'}}>{bank.name}</h6>
                   <p>{bank.description ?? ''}</p>
                 </Stack>
                 {/* <div className="flex-shrink-1">

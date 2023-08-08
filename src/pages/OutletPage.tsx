@@ -139,7 +139,7 @@ export default function OutletPage() {
                 }}
               >
                 <Stack className="flex-grow-1">
-                  <span>{outletItem.name}</span>
+                  <h6 style={{borderBottom: '0.1px solid gainsboro'}}>{outletItem.name}</h6>
                   <p>{outletItem.description}</p>
                 </Stack>
                 {/* <div className="flex-shrink-1">
@@ -196,7 +196,7 @@ export default function OutletPage() {
             </div>
           }
           <div className="input-box">
-          <label>Bank Payment</label>
+          <label>Default Bank Payment</label>
           <Select 
             // value={banks.find(b => b.id === bill.payment_bank_id)?.name ?? ''}
             value={mapBankToSelectOptions(banks).filter(b => b.bank_id === outlet.default_bank_id)[0]}

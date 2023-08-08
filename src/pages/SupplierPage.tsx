@@ -164,7 +164,7 @@ export default function SupplierPage() {
                 }}
               >
                 <Stack className="flex-grow-1">
-                  <span>{supplierItem.name}</span>
+                  <h6 style={{borderBottom: '0.1px solid gainsboro'}}>{supplierItem.name}</h6>
                   <p>{supplierItem.description}</p>
                 </Stack>
                 {/* <div className="flex-shrink-1">
