@@ -29,6 +29,8 @@ label.dropdown {
 
   cursor: pointer;
   transition: all 0.2s ;
+  
+  color: black;
 }
 
 .range-item.highlight {
