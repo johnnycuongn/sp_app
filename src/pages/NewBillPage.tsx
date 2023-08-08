@@ -303,7 +303,22 @@ export default function NewBillPage() {
     </div>
 
     {selectedFilesContent.length !== 0 && 
-      <img style={{border: '1px solid gainsboro'}} className="img-fluid p-2" src={selectedFilesContent[0]!}  alt="Attachment"/>
+    <>
+      <img style={{border: '1px solid gainsboro'}} className="p-2" width={'20%'} height='auto' src={selectedFilesContent[0]!}  alt="Attachment" data-bs-toggle="modal" data-bs-target="#myModal"/>
+
+      <div className="modal fade" id="myModal" tabIndex={-1} role="dialog" aria-labelledby="myModalLabel">
+        <div className="modal-dialog modal-lg" role="document">
+          <div className="modal-content">
+            <div className="modal-header justify-content-end">
+              <button type="button" className="close" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div className="modal-body">
+              <img src={selectedFilesContent[0]!} alt="Large Image" width="100%" height="auto"/>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
     }
     <hr />
     {isStringValid(pageState.errorText) && 
