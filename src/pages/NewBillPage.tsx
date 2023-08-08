@@ -67,6 +67,7 @@ export default function NewBillPage() {
   }, [])
 
   async function init() {
+    setPageLoading(true)
     await Bill._initialize()
     // get all suppliers
     const supplierData = Bill.suppliers
@@ -91,6 +92,7 @@ export default function NewBillPage() {
       }
 
     }
+    setPageLoading(false)
   }
 
   /**
@@ -144,7 +146,7 @@ export default function NewBillPage() {
     setPageState(o => {
       return {...o, errorText: ''}
     })
-    setPageState(o => {return {...o, loading: true}})
+    setPageLoading(true)
 
     // Validate bill
     console.log('Submitting bill');
@@ -170,7 +172,7 @@ export default function NewBillPage() {
         return {...o, errorText: message}
       })
     } finally {
-      setPageState(o => {return {...o, loading: false}})
+      setPageLoading(false)
     }
   }
 
@@ -178,7 +180,7 @@ export default function NewBillPage() {
     setPageState(o => {
       return {...o, errorText: ''}
     })
-    setPageState(o => {return {...o, loading: true}})
+    setPageLoading(true)
 
     try {
       await Bill.delete(id!)
@@ -188,13 +190,17 @@ export default function NewBillPage() {
         return {...o, errorText: 'Fail to delete bill'}
       })
     } finally {
-      setPageState(o => {return {...o, loading: false}})
+      setPageLoading(false)
     }
+  }
+
+  const setPageLoading = (loading: boolean) => {
+    setPageState(o => {return {...o, loading: loading}})
   }
 
   return (
   <div className="p-3">
-    <h2>{isUpdating ? 'Updating Bill' :'New Bill'}</h2>
+    {<h2>{isUpdating ? 'Updating Bill' :'New Bill'}</h2>}
     <div className="input-box">
       <label className="me-2">Payment Date</label>
       <input type="date" name="" id="" 
@@ -208,7 +214,7 @@ export default function NewBillPage() {
     <div className="input-box">
       <label>Supplier</label>
       <Select className="select"
-        isDisabled={isUpdating && Boolean(suppliers.find((s => s.id === bill.supplier_id)))}
+        isDisabled={pageState.loading}
         value={mapSuppliersToSelectOptions(suppliers).filter(option => option.supplier_id === bill.supplier_id)[0]} 
         options={mapSuppliersToSelectOptions(suppliers)} onChange={(option) => {
           if (option && suppliers.find(el => el.id === option.supplier_id)) {
@@ -220,7 +226,7 @@ export default function NewBillPage() {
     <div className="input-box">
       <label>Outlet</label>
       <Select className="select"
-        isDisabled={isUpdating && Boolean(outlets.find((s => s.id === bill.outlet_id)))}
+        isDisabled={pageState.loading}
         value={mapOutletsToSelectOptions(outlets).filter(option => option.outlet_id === bill.outlet_id)[0]} 
         options={mapOutletsToSelectOptions(outlets)} 
         onChange={(option) => {
@@ -241,6 +247,7 @@ export default function NewBillPage() {
       <div className="input-box">
         <label>Payment</label>
         <Select 
+          isDisabled={pageState.loading}
           value={mapPaymentToSelectOptions(payments).filter(b => b.payment_id === bill.payment_bank_id)[0]}
           options={mapPaymentToSelectOptions(payments)}
           onChange={(option) => {
@@ -292,11 +299,11 @@ export default function NewBillPage() {
     <div className="input-box">
       <label>Files</label>  
       {selectedFilesContent.length === 0 && <input className="form-control" type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef}/>}
-      {selectedFilesContent.length !== 0 && <button className="btn" onClick={handleFileRemove}>Remove File</button>}
+      {selectedFilesContent.length !== 0 && <button className="btn btn-secondary" onClick={handleFileRemove}>Remove File</button>}
     </div>
 
     {selectedFilesContent.length !== 0 && 
-      <img className="img-fluid p-2" src={selectedFilesContent[0]!}  alt="Attachment"/>
+      <img style={{border: '1px solid gainsboro'}} className="img-fluid p-2" src={selectedFilesContent[0]!}  alt="Attachment"/>
     }
     <hr />
     {isStringValid(pageState.errorText) && 
