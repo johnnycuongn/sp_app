@@ -1,17 +1,17 @@
-import { BankModelInterface } from "../../model"
+import { PaymentModelInterface } from "../../model"
 
 
-export function mapBankToSelectOptions(banks: BankModelInterface[]): {
-  bank_id: string,
+export function mapPaymentToSelectOptions(payments: PaymentModelInterface[]): {
+  payment_id: string,
   value: string,
   label: string
 }[] {
-  return banks.map((bank) => {
+  return payments.map((payment) => {
 
     return {
-      bank_id: bank.id ?? '',
-      value: bank.id ?? '',
-      label: bank.name
+      payment_id: payment.id ?? '',
+      value: payment.id ?? '',
+      label: payment.name
     }
   })
 }

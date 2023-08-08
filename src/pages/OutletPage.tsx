@@ -5,17 +5,17 @@ import { Grid, Paper, Stack, Dialog, DialogTitle, DialogContent, DialogActions, 
 import { Error as ErrorIcon } from '@mui/icons-material';
 import Select from 'react-select';
 
-import { Bank, BankModelInterface, Outlet, OutletModelInterface } from "../model";
+import { Payment, PaymentModelInterface, Outlet, OutletModelInterface } from "../model";
 import { isStringValid } from "../utils/isValid";
-import { mapBankToSelectOptions } from "./helper/helper";
+import { mapPaymentToSelectOptions } from "./helper/helper";
 
 export default function OutletPage() {
 
 
-  const [outlet, setOutlet] = useState<OutletModelInterface>({name: '', description: '', default_bank_id: ''})
+  const [outlet, setOutlet] = useState<OutletModelInterface>({name: '', description: '', default_payment_id: ''})
   const [outlets, setOutlets] = useState<OutletModelInterface[]>([])
 
-  const [banks, setBanks] = useState<BankModelInterface[]>([])
+  const [payments, setPayments] = useState<PaymentModelInterface[]>([])
 
   const [pageState, setPageState] = React.useState({
     outletModalOpen: false,
@@ -31,8 +31,8 @@ export default function OutletPage() {
   async function init() {
     await fetchAllOutlets()
     
-    const banksData = await Bank.getAll()
-    setBanks(() => [...banksData])
+    const paymentsData = await Payment.getAll()
+    setPayments(() => [...paymentsData])
   }
 
   const fetchAllOutlets = async () => {
@@ -92,7 +92,7 @@ export default function OutletPage() {
   const handleCreatedOutletModal = async (state: 'open' | 'close', outletId?: string) => {
     if (state === 'close') {
       setPageState((state) => { return {...state, outletModalOpen: false, modalLoading: false, modalErrorText: '' }})
-      setOutlet({ name: '', description: '', default_bank_id: ''})
+      setOutlet({ name: '', description: '', default_payment_id: ''})
     }
     else {
       setPageState((state) => { return {...state, outletModalOpen: true }})
@@ -196,16 +196,15 @@ export default function OutletPage() {
             </div>
           }
           <div className="input-box">
-          <label>Default Bank Payment</label>
+          <label>Default Payment</label>
           <Select 
-            // value={banks.find(b => b.id === bill.payment_bank_id)?.name ?? ''}
-            value={mapBankToSelectOptions(banks).filter(b => b.bank_id === outlet.default_bank_id)[0]}
-            options={mapBankToSelectOptions(banks)}
+            value={mapPaymentToSelectOptions(payments).filter(b => b.payment_id === outlet.default_payment_id)[0]}
+            options={mapPaymentToSelectOptions(payments)}
             onChange={(option) => {
-              if (option && banks.find(b => b.id === option.bank_id)) {
+              if (option && payments.find(b => b.id === option.payment_id)) {
                 setOutlet(o => {return {
                   ...o,
-                  default_bank_id: option.bank_id
+                  default_payment_id: option.payment_id
                 }})
               }
             }}

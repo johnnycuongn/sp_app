@@ -4,7 +4,7 @@ export interface LimitTotalPaymentModelInterface {
   yearly?: number
 }
 
-export interface BankModelInterface {
+export interface PaymentModelInterface {
   description: string
   id?: string
   name: string
@@ -25,7 +25,7 @@ export interface BillModelInterface {
 }
 
 export interface BillViewModelInterface extends BillModelInterface {
-  payment_bank_name?: string,
+  payment_name?: string,
   supplier_name: string,
 }
 
@@ -52,7 +52,7 @@ export interface OutletModelInterface {
   id?: string
   name: string
   description: string
-  default_bank_id: string
+  default_payment_id: string
 }
 
 export interface SupplierModelMainDocInterface {

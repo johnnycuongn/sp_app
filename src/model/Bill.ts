@@ -2,10 +2,10 @@ import { DocumentData, Query, QueryConstraint, QuerySnapshot, deleteDoc, doc, ge
 import { auth, billRef, billsColRef, db, storage, storageBillsRef, storageOneBillRef } from "../services/firebase/index"
 import { isStringValid } from "../utils/isValid"
 import { removeEmpty } from "../utils/object"
-import { BankModelInterface, BillModelInterface, BillViewModelInterface, SupplierModelInterface } from "./model"
+import { PaymentModelInterface, BillModelInterface, BillViewModelInterface, SupplierModelInterface } from "./model"
 import { deleteObject, getDownloadURL, listAll, ref, uploadBytes } from "firebase/storage"
 import { Supplier } from "./Supplier"
-import { Bank } from "./Bank"
+import { Payment } from "./Payment"
 
 
 export class Bill {
@@ -18,24 +18,24 @@ export class Bill {
   /**
    * Need to run `_initialize()` at the begining/useEffect first run to use the property, else receive empty
    */
-  public static banks: BankModelInterface[] = []
+  public static payments: PaymentModelInterface[] = []
   
   public static YEAR_INITAL: number = 2023
 
   /**
-   * If you are using Bill class in a component and want lastest data, please use this function to initialize `suppliers` and `banks`
+   * If you are using Bill class in a component and want lastest data, please use this function to initialize `suppliers` and `payments`
    */
-  public static async _initialize(suppliers?: SupplierModelInterface[], banks?: BankModelInterface[]) {
+  public static async _initialize(suppliers?: SupplierModelInterface[], payments?: PaymentModelInterface[]) {
     if (suppliers) {
       this.suppliers = suppliers.length === 0 ? await Supplier.getAll() : suppliers;
     } else {
       this.suppliers = await Supplier.getAll()
     }
     
-    if (banks) {
-      this.banks = banks.length === 0 ? await Bank.getAll() : banks;
+    if (payments) {
+      this.payments = payments.length === 0 ? await Payment.getAll() : payments;
     } else {
-      this.banks = await Bank.getAll()
+      this.payments = await Payment.getAll()
     }
 
     const year_query = query(billsColRef, where("payment_date", "<=", new Date()), orderBy("payment_date", 'asc'), limit(1));
@@ -47,15 +47,15 @@ export class Bill {
   }
 
   /**
-   * Put this every function that require suppliers and banks
+   * Put this every function that require suppliers and payments
    */
-  private static async suppliers_banks_init() {
+  private static async suppliers_payments_init() {
     if (this.suppliers.length === 0) {
       this.suppliers = await Supplier.getAll()
     } 
 
-    if (this.banks.length === 0) {
-      this.banks = await Bank.getAll()
+    if (this.payments.length === 0) {
+      this.payments = await Payment.getAll()
     }
   }
 
@@ -87,7 +87,7 @@ export class Bill {
     // - End Process
 
     if (!isStringValid(postData.payment_bank_id)) {
-      throw new Error('Unable to add bank to bill.')
+      throw new Error('Unable to add payment to bill.')
     }
 
     let operations = []
@@ -112,7 +112,7 @@ export class Bill {
   }
 
   static async get(id: string): Promise<BillModelInterface | null> {
-    this.suppliers_banks_init()
+    this.suppliers_payments_init()
     const docSnap = await getDoc(billRef(id))
 
     const data = docSnap.data()
@@ -129,7 +129,7 @@ export class Bill {
   }
 
   static async getAllForSupplier(supplierId: string): Promise<BillModelInterface[]> {
-    this.suppliers_banks_init()
+    this.suppliers_payments_init()
 
     if (!supplierId) throw new Error('Invalid supplier!')
 
@@ -204,7 +204,7 @@ export class Bill {
 
 
   static async getAll(...billQuery: QueryConstraint[]): Promise<BillViewModelInterface[]> {
-    this.suppliers_banks_init()
+    this.suppliers_payments_init()
 
     const querySnapshot = await getDocs(query(billsColRef, orderBy("payment_date", 'desc')));
 
@@ -278,17 +278,17 @@ export class Bill {
    * 
    */
   private static fromModelToViewModel(billModel: BillModelInterface): BillViewModelInterface {
-    this.suppliers_banks_init()
+    this.suppliers_payments_init()
 
-    // Map Bank and Supplier
+    // Map Payment and Supplier
     let billViewData: BillViewModelInterface = {...billModel, supplier_name: 'Unknown supplier'}
 
     let foundSupplier = this.suppliers.find((s) => s.id === billViewData.supplier_id)
     billViewData = {...billViewData, supplier_name: foundSupplier ? foundSupplier.name : 'Unknown supplier'}
 
     if (billViewData.payment_bank_id) {
-      let foundBank = this.banks.find((b) => b.id === billViewData.payment_bank_id)
-      billViewData = {...billViewData, payment_bank_name: foundBank ? foundBank.name : 'Unkown bank'}
+      let foundPayment = this.payments.find((b) => b.id === billViewData.payment_bank_id)
+      billViewData = {...billViewData, payment_name: foundPayment ? foundPayment.name : 'Unkown payment'}
     }
   
   
@@ -333,6 +333,6 @@ function validateBill(bill: BillModelInterface, requireID: boolean = false, requ
   }
 
   if (!isStringValid(bill.payment_bank_id)) {
-    throw new Error('Unable to add bank to bill.')
+    throw new Error('Unable to add payment to bill.')
   }
 }

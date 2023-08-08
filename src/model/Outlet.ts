@@ -83,7 +83,7 @@ export class Outlet {
       id: id ?? '',
       name: data.name ?? '',
       description: data.description ?? '',
-      default_bank_id: data.default_bank_id ?? ''
+      default_payment_id: data.default_payment_id ?? ''
     }
 
     return OutletObj

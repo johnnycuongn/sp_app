@@ -11,13 +11,6 @@ import { generateReport, getQuarterDates } from "./HomePage.report";
 import { numberWithCommas } from "../utils/number";
 
 
-interface BillTableViewModel extends BillModelInterface {
-  id?: string
-  supplierName: string
-  bankName?: string
-}
-
-
 
 export default function HomePage() {
 
@@ -251,7 +244,7 @@ export default function HomePage() {
                     </TableCell>
                     <TableCell component="th" scope="row" align="left" width={200}>{bill.supplier_name}</TableCell>
                     <TableCell component="th" scope="row" align="left" width={300}>
-                      {`${bill.payment_bank_name}`}
+                      {`${bill.payment_name}`}
                     </TableCell>
                     <TableCell align="right">${bill.total_payment}</TableCell>
                     <TableCell align="right">{bill.payment_status}</TableCell>

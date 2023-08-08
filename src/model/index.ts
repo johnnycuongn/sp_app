@@ -1,6 +1,6 @@
 export * from "./Bill";
 export * from './User'
-export * from './Bank'
+export * from './Payment'
 export * from './Supplier'
 export * from './Outlet'
 export * from './Auth'

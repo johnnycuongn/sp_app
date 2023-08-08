@@ -4,22 +4,22 @@ import './general.css'
 import { Grid, Paper, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, IconButton, Menu, CircularProgress, LinearProgress } from "@mui/material";
 import { Error as ErrorIcon } from '@mui/icons-material';
 
-import { BankModelInterface } from "../model";
+import { PaymentModelInterface } from "../model";
 import { isStringValid } from "../utils/isValid";
-import { Bank } from "../model/Bank";
+import { Payment } from "../model/Payment";
 import { color } from "../style";
 
 export default function PaymentPage() {
 
 
-  const [modalBank, setModalBank] = useState<BankModelInterface>({
+  const [modalPayment, setModalPayment] = useState<PaymentModelInterface>({
     name: "",
     description: ""
   })
-  const [banks, setBanks] = useState<BankModelInterface[]>([])
+  const [payments, setPayments] = useState<PaymentModelInterface[]>([])
 
   const [pageState, setPageState] = React.useState({
-    bankModalOpen: false,
+    paymentModalOpen: false,
     modalLoading: false,
     modalErrorText: '',
   });
@@ -30,23 +30,23 @@ export default function PaymentPage() {
 
 
   async function init() {
-    await fetchAllBanks()
+    await fetchAllPayments()
   }
 
-  const fetchAllBanks = async () => {
-    const data = await Bank.getAll()
+  const fetchAllPayments = async () => {
+    const data = await Payment.getAll()
 
-    setBanks(() => [...data])
+    setPayments(() => [...data])
   }
 
-  const handleCreateBank = async () => {
+  const handleCreatePayment = async () => {
     try {
       setPageState(o => {return {...o, modalLoading: true }})
-      console.log('Creating Bank' + JSON.stringify(modalBank));
-      await Bank.create(modalBank)
+      console.log('Creating Payment' + JSON.stringify(modalPayment));
+      await Payment.create(modalPayment)
 
-      await fetchAllBanks()
-      handleCreatedBankModal('close')
+      await fetchAllPayments()
+      handleCreatedPaymentModal('close')
     } catch (e) {
       handleModalError(e)
     } finally {
@@ -54,31 +54,14 @@ export default function PaymentPage() {
     }
   }
 
-  const handleDeleteBank = async () => {
+  const handleDeletePayment = async () => {
     try {
       setPageState(o => {return {...o, modalLoading: true }})
 
-      await Bank.delete(modalBank.id ?? '')
+      await Payment.delete(modalPayment.id ?? '')
 
-      await fetchAllBanks()
-      handleCreatedBankModal('close')
-    } catch (e) {
-      handleModalError(e)
-    } finally {
-      setPageState(o => {return {...o, modalLoading: false }})
-    }
-  }
-
-
-  const handleUpdateBank = async () => {
-    try {
-      setPageState(o => {return {...o, modalLoading: true }})
-
-      if (!isStringValid(modalBank.id)) throw new Error('Invalid Bank')
-      await Bank.update(modalBank.id!, modalBank)
-
-      await fetchAllBanks()
-      await handleCreatedBankModal('close')
+      await fetchAllPayments()
+      handleCreatedPaymentModal('close')
     } catch (e) {
       handleModalError(e)
     } finally {
@@ -87,25 +70,42 @@ export default function PaymentPage() {
   }
 
 
-  const handleCreatedBankModal = async (state: 'open' | 'close', bankId?: string) => {
+  const handleUpdatePayment = async () => {
+    try {
+      setPageState(o => {return {...o, modalLoading: true }})
+
+      if (!isStringValid(modalPayment.id)) throw new Error('Invalid Payment')
+      await Payment.update(modalPayment.id!, modalPayment)
+
+      await fetchAllPayments()
+      await handleCreatedPaymentModal('close')
+    } catch (e) {
+      handleModalError(e)
+    } finally {
+      setPageState(o => {return {...o, modalLoading: false }})
+    }
+  }
+
+
+  const handleCreatedPaymentModal = async (state: 'open' | 'close', paymentId?: string) => {
     if (state === 'close') {
-      setPageState((state) => { return {...state, bankModalOpen: false, modalLoading: false, modalErrorText: '' }})
-      setModalBank({ name: '', description: ''})
+      setPageState((state) => { return {...state, paymentModalOpen: false, modalLoading: false, modalErrorText: '' }})
+      setModalPayment({ name: '', description: ''})
     }
     else {
-      setPageState((state) => { return {...state, bankModalOpen: true }})
+      setPageState((state) => { return {...state, paymentModalOpen: true }})
 
-      if (isStringValid(bankId)) {
-        const updatedBank = await Bank.get(bankId ?? '')
+      if (isStringValid(paymentId)) {
+        const updatedPayment = await Payment.get(paymentId ?? '')
 
-        if (updatedBank) setModalBank(updatedBank)
+        if (updatedPayment) setModalPayment(updatedPayment)
       }
     }
   }
 
   const handleModalError = (error: any) => {
 
-    let message = isStringValid(modalBank.id) ? 'Fail to update bank' : 'Fail to create bank'
+    let message = isStringValid(modalPayment.id) ? 'Fail to update payment. Please try again.' : 'Fail to create payment. Please try again.'
     console.log(error);
     setPageState((o) => {
 
@@ -119,26 +119,26 @@ export default function PaymentPage() {
 
   return (
     <div className="p-3">
-      <div id="bank_page_bar" className="d-flex flex-row justify-content-between mb-3">
+      <div id="payment_page_bar" className="d-flex flex-row justify-content-between mb-3">
         <div className="d-flex flex-row">
-          <h2 className="me-2">Bank</h2> 
-          <button className="clear-hover" onClick={() => handleCreatedBankModal('open')}>
-            + new bank
+          <h2 className="me-2">Payment</h2> 
+          <button className="clear-hover" onClick={() => handleCreatedPaymentModal('open')}>
+            + new payment
           </button>
         </div>
       </div>
-      <div id="banks_layout" className="">
+      <div id="payments_layout" className="">
         <Grid container spacing={{ xs: 2, md: 3 }} columns={{ xs: 2, sm: 8, md: 12 }}>
-          {banks.map((bank, index) => (
-            <Grid item xs={2} sm={4} md={4} key={bank.id}>
+          {payments.map((payment, index) => (
+            <Grid item xs={2} sm={4} md={4} key={payment.id}>
               <div className="grid-item d-flex flex-row"
                 onClick={() => {
-                  handleCreatedBankModal('open', bank.id)
+                  handleCreatedPaymentModal('open', payment.id)
                 }}
               >
                 <Stack className="flex-grow-1">
-                  <h6 style={{borderBottom: '0.1px solid gainsboro'}}>{bank.name}</h6>
-                  <p>{bank.description ?? ''}</p>
+                  <h6 style={{borderBottom: '0.1px solid gainsboro'}}>{payment.name}</h6>
+                  <p>{payment.description ?? ''}</p>
                 </Stack>
                 {/* <div className="flex-shrink-1">
                   <IconButton>
@@ -151,18 +151,18 @@ export default function PaymentPage() {
         </Grid>
       </div>
       <Dialog
-        open={pageState.bankModalOpen}
-        onClose={() => handleCreatedBankModal('close')}
+        open={pageState.paymentModalOpen}
+        onClose={() => handleCreatedPaymentModal('close')}
         maxWidth='lg'
       >
         <DialogTitle>
-          { modalBank.id ? 'Bank Information' : 'Add new bank'}
+          { modalPayment.id ? 'Payment Information' : 'Add new payment'}
         </DialogTitle>
         <DialogContent>
-          <TextField className="mb-3" id="bank_name" label="Name" variant="standard" fullWidth
-            value={modalBank.name}
+          <TextField className="mb-3" id="payment_name" label="Name" variant="standard" fullWidth
+            value={modalPayment.name}
             onChange={(e) => {
-              setModalBank((o) => {
+              setModalPayment((o) => {
                 return {
                   ...o,
                   name: e.target.value
@@ -171,9 +171,9 @@ export default function PaymentPage() {
             }}
           />
           <TextField className="mb-3" id="outlined-multiline-flexible" label="Description" variant="standard" multiline rows={4} fullWidth
-            value={modalBank.description}
+            value={modalPayment.description}
             onChange={(e) => {
-              setModalBank((o) => {
+              setModalPayment((o) => {
                 return {
                   ...o,
                   description: e.target.value
@@ -190,21 +190,21 @@ export default function PaymentPage() {
           
         </DialogContent>
         <DialogActions>
-          <Button sx={{color: 'grey'}} onClick={() => handleCreatedBankModal('close')}
+          <Button sx={{color: 'grey'}} onClick={() => handleCreatedPaymentModal('close')}
             hidden={pageState.modalLoading}
             disabled={pageState.modalLoading}
           >
             Cancel
             </Button>
-          {modalBank.id ? 
+          {modalPayment.id ? 
             (<>
-            {/* Delete bank require moving to other bank */}
+            {/* Delete payment require moving to other payment */}
               <Button
                 sx={{
                   color: 'red'
                 }}
                 onClick={async (e) => {
-                  await handleDeleteBank()
+                  await handleDeletePayment()
                 }}
                 disabled={pageState.modalLoading}
                 hidden={pageState.modalLoading}
@@ -215,7 +215,7 @@ export default function PaymentPage() {
               <button
                 className="btn btn-submit hover"
                 onClick={async (e) => {
-                  await handleUpdateBank()
+                  await handleUpdatePayment()
                 }}
                 disabled={pageState.modalLoading}
                 hidden={pageState.modalLoading}
@@ -227,7 +227,7 @@ export default function PaymentPage() {
           <button
             className="btn btn-submit hover"
             onClick={async (e) => {
-              await handleCreateBank()
+              await handleCreatePayment()
             }}
             disabled={pageState.modalLoading}
             hidden={pageState.modalLoading}

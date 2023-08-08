@@ -5,10 +5,10 @@ import Select from 'react-select'
 import './NewBillPage.css'
 import { Error as ErrorIcon } from '@mui/icons-material';
 
-import { BankModelInterface, Bill, BillModelInterface, Outlet, OutletModelInterface, PAYMENT_STATUSES, PaymentStatus, SupplierModelInterface } from "../model";
+import { PaymentModelInterface, Bill, BillModelInterface, Outlet, OutletModelInterface, PAYMENT_STATUSES, PaymentStatus, SupplierModelInterface } from "../model";
 import { isNumeric, isStringValid } from "../utils/isValid";
 import { uppercaseFirst } from "../utils/string";
-import { mapBankToSelectOptions } from "./helper/helper";
+import { mapPaymentToSelectOptions } from "./helper/helper";
 
 
 export default function NewBillPage() {
@@ -35,7 +35,7 @@ export default function NewBillPage() {
   })
 
   const [suppliers, setSuppliers] = useState<SupplierModelInterface[]>([])
-  const [banks, setBanks] = useState<BankModelInterface[]>([])
+  const [payments, setPayments] = useState<PaymentModelInterface[]>([])
   const [outlets, setOutlets] = useState<OutletModelInterface[]>([])
 
   const [selectedFilesContent, setSelectedFilesContent] = useState<(string)[]>([])
@@ -45,10 +45,10 @@ export default function NewBillPage() {
 
   const isBillAddable: boolean = useMemo(() => {
     const isSupplierValid = isStringValid(bill.supplier_id)
-    const isBankValid = isStringValid(bill.payment_bank_id)
+    const isPaymentValid = isStringValid(bill.payment_bank_id)
 
     if (isSupplierValid && !isNaN(bill.total_payment) && bill.total_payment !== 0) {
-      if (isBankValid) return true
+      if (isPaymentValid) return true
       else return false
     }
 
@@ -72,9 +72,9 @@ export default function NewBillPage() {
     const supplierData = Bill.suppliers
     setSuppliers(() => [...supplierData])
 
-    // get all banks
-    const banksData = await Bill.banks
-    setBanks(() => [...banksData])
+    // get all payments
+    const paymentsData = await Bill.payments
+    setPayments(() => [...paymentsData])
 
     const outletData = await Outlet.getAll()
     setOutlets(() => [...outletData])
@@ -226,8 +226,8 @@ export default function NewBillPage() {
             const outlet = outlets.find(el => el.id === option.outlet_id)!
             setBill(o => {return {...o, outlet_id: option.outlet_id}}) 
 
-            if (outlet.default_bank_id) {
-              setBill(o => {return {...o, payment_bank_id: outlet.default_bank_id}})
+            if (outlet.default_payment_id) {
+              setBill(o => {return {...o, payment_bank_id: outlet.default_payment_id}})
             }
             
           }
@@ -236,16 +236,15 @@ export default function NewBillPage() {
     </div>
     {
       <div className="input-box">
-        <label>Bank Payment</label>
+        <label>Payment</label>
         <Select 
-          // value={banks.find(b => b.id === bill.payment_bank_id)?.name ?? ''}
-          value={mapBankToSelectOptions(banks).filter(b => b.bank_id === bill.payment_bank_id)[0]}
-          options={mapBankToSelectOptions(banks)}
+          value={mapPaymentToSelectOptions(payments).filter(b => b.payment_id === bill.payment_bank_id)[0]}
+          options={mapPaymentToSelectOptions(payments)}
           onChange={(option) => {
-            if (option && banks.find(b => b.id === option.bank_id)) {
+            if (option && payments.find(b => b.id === option.payment_id)) {
               setBill(o => {return {
                 ...o,
-                payment_bank_id: option.bank_id
+                payment_bank_id: option.payment_id
               }})
             }
           }}

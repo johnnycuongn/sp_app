@@ -1,7 +1,7 @@
 import React from "react";
 import { BillViewModelInterface } from "../model";
 import { Bill, Supplier } from "../model";
-import { Bank } from "../model/Bank";
+import { Payment } from "../model/Payment";
 
 interface LooseObject {
   [key: string]: number
@@ -12,7 +12,7 @@ export async function generateReport(year: number, bills: BillViewModelInterface
   // console.log('bills', bills);
 
   const suppliers = Bill.suppliers
-  const banks = Bill.banks
+  const payments = Bill.payments
 
   let report: LooseObject = {}
 
@@ -20,8 +20,8 @@ export async function generateReport(year: number, bills: BillViewModelInterface
   report['Not paid'] = 0
 
   // Set ids as keys
-  banks.forEach((bank) => {
-    report[bank.id ?? '0'] = 0
+  payments.forEach((payment) => {
+    report[payment.id ?? '0'] = 0
   })
 
   // let bills = billsOnYear.filter((bill) => {
@@ -48,7 +48,7 @@ export async function generateReport(year: number, bills: BillViewModelInterface
       return;
     }
 
-    if (bill.payment_bank_id && Boolean(banks.find(b => b.id === bill.payment_bank_id))) {
+    if (bill.payment_bank_id && Boolean(payments.find(b => b.id === bill.payment_bank_id))) {
       report[bill.payment_bank_id] += bill.total_payment
     }
     
@@ -63,10 +63,10 @@ export async function generateReport(year: number, bills: BillViewModelInterface
     //   acc[key] = report[key]
     // }
 
-    const foundBank = banks.find(b => b.id === key)
+    const foundPayment = payments.find(b => b.id === key)
     let newKey = key
-    if (foundBank) {
-      newKey = foundBank.name;
+    if (foundPayment) {
+      newKey = foundPayment.name;
       acc[newKey] = report[key];
     }
     
