@@ -27,6 +27,7 @@ export interface BillModelInterface {
 export interface BillViewModelInterface extends BillModelInterface {
   payment_name?: string,
   supplier_name: string,
+  outlet_name: string
 }
 
 export type PaymentStatus = 'paid' | 'not paid'

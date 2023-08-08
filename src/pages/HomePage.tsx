@@ -229,6 +229,7 @@ export default function HomePage() {
                 <TableRow>
                   <TableCell>Date</TableCell>
                   <TableCell align="left">Supplier</TableCell>
+                  <TableCell align="left">Outlet</TableCell>
                   <TableCell align="left">Payment</TableCell>
                   <TableCell align="right">Total&nbsp;($)</TableCell>
                   <TableCell align="right">Status</TableCell>
@@ -242,9 +243,10 @@ export default function HomePage() {
                     sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
                   >
                     <TableCell component="th" scope="row" width={20}>
-                      {bill.payment_date.toLocaleDateString()}
+                      {bill.payment_date.toLocaleDateString('en-GB')}
                     </TableCell>
                     <TableCell component="th" scope="row" align="left" width={200}>{bill.supplier_name}</TableCell>
+                    <TableCell component="th" scope="row" align="left" width={200}>{bill.outlet_name}</TableCell>
                     <TableCell component="th" scope="row" align="left" width={300}>
                       {`${bill.payment_name}`}
                     </TableCell>

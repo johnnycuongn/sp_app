@@ -2,30 +2,36 @@ import { DocumentData, Query, QueryConstraint, QuerySnapshot, deleteDoc, doc, ge
 import { auth, billRef, billsColRef, db, storage, storageBillsRef, storageOneBillRef } from "../services/firebase/index"
 import { isStringValid } from "../utils/isValid"
 import { removeEmpty } from "../utils/object"
-import { PaymentModelInterface, BillModelInterface, BillViewModelInterface, SupplierModelInterface } from "./model"
+import { PaymentModelInterface, BillModelInterface, BillViewModelInterface, SupplierModelInterface, OutletModelInterface } from "./model"
 import { deleteObject, getDownloadURL, listAll, ref, uploadBytes } from "firebase/storage"
 import { Supplier } from "./Supplier"
 import { Payment } from "./Payment"
+import { Outlet } from "./Outlet"
 
 
 export class Bill {
 
   /**
-   * Need to run `_initialize()` at the begining/useEffect first run to use the property, else receive empty
+   * Need to run `_initialize()` at the begining/useEffect of a page first run to use the property, else receive empty
    */
   public static suppliers: SupplierModelInterface[] = []
 
   /**
-   * Need to run `_initialize()` at the begining/useEffect first run to use the property, else receive empty
+   * Need to run `_initialize()` at the begining/useEffect of a page first run to use the property, else receive empty
    */
   public static payments: PaymentModelInterface[] = []
+
+  /**
+   * Need to run `_initialize()` at the begining/useEffect of a page first run to use the property, else receive empty
+   */
+  public static outlets: OutletModelInterface[] = []
   
   public static YEAR_INITAL: number = 2023
 
   /**
    * If you are using Bill class in a component and want lastest data, please use this function to initialize `suppliers` and `payments`
    */
-  public static async _initialize(suppliers?: SupplierModelInterface[], payments?: PaymentModelInterface[]) {
+  public static async _initialize(suppliers?: SupplierModelInterface[], payments?: PaymentModelInterface[], outlets?: OutletModelInterface[]) {
     if (suppliers) {
       this.suppliers = suppliers.length === 0 ? await Supplier.getAll() : suppliers;
     } else {
@@ -36,6 +42,12 @@ export class Bill {
       this.payments = payments.length === 0 ? await Payment.getAll() : payments;
     } else {
       this.payments = await Payment.getAll()
+    }
+
+    if (outlets) {
+      this.outlets = outlets.length === 0 ? await Outlet.getAll() : outlets
+    } else {
+      this.outlets = await Outlet.getAll()
     }
 
     const year_query = query(billsColRef, where("payment_date", "<=", new Date()), orderBy("payment_date", 'asc'), limit(1));
@@ -56,6 +68,10 @@ export class Bill {
 
     if (this.payments.length === 0) {
       this.payments = await Payment.getAll()
+    }
+
+    if (this.outlets.length === 0) {
+      this.outlets = await Outlet.getAll()
     }
   }
 
@@ -299,7 +315,7 @@ export class Bill {
     this.suppliers_payments_init()
 
     // Map Payment and Supplier
-    let billViewData: BillViewModelInterface = {...billModel, supplier_name: 'Unknown supplier'}
+    let billViewData: BillViewModelInterface = {...billModel, supplier_name: 'Unknown supplier', outlet_name: 'Unknown outlet'}
 
     let foundSupplier = this.suppliers.find((s) => s.id === billViewData.supplier_id)
     billViewData = {...billViewData, supplier_name: foundSupplier ? foundSupplier.name : 'Unknown supplier'}
@@ -307,6 +323,11 @@ export class Bill {
     if (billViewData.payment_bank_id) {
       let foundPayment = this.payments.find((b) => b.id === billViewData.payment_bank_id)
       billViewData = {...billViewData, payment_name: foundPayment ? foundPayment.name : 'Unkown payment'}
+    }
+
+    if (billViewData.outlet_id) {
+      let foundOutlet = this.outlets.find((o) => o.id === billViewData.outlet_id)
+      billViewData = {...billViewData, outlet_name: foundOutlet ? foundOutlet.name : 'Unknown outlet'}
     }
   
   
