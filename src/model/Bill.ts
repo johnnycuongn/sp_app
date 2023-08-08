@@ -85,11 +85,8 @@ export class Bill {
     }
 
     // - End Process
-    
-    if (postData.payment_type === 'cash' && isStringValid(postData.payment_bank_id)) {
-      delete postData.payment_bank_id
-    }
-    if (postData.payment_type === 'bank' && !isStringValid(postData.payment_bank_id)) {
+
+    if (!isStringValid(postData.payment_bank_id)) {
       throw new Error('Unable to add bank to bill.')
     }
 
@@ -266,7 +263,6 @@ export class Bill {
       payment_date: docData.payment_date.toDate(),
       total_payment: docData.total_payment ?? 0,
       payment_status: docData.payment_status,
-      payment_type: docData.payment_type,
       payment_bank_id: docData.payment_bank_id ?? '',
       files_ref: docData.files_ref as string[] ?? [],
       meta: docData.meta && {
@@ -290,7 +286,7 @@ export class Bill {
     let foundSupplier = this.suppliers.find((s) => s.id === billViewData.supplier_id)
     billViewData = {...billViewData, supplier_name: foundSupplier ? foundSupplier.name : 'Unknown supplier'}
 
-    if (billViewData.payment_bank_id && billViewData.payment_type === 'bank') {
+    if (billViewData.payment_bank_id) {
       let foundBank = this.banks.find((b) => b.id === billViewData.payment_bank_id)
       billViewData = {...billViewData, payment_bank_name: foundBank ? foundBank.name : 'Unkown bank'}
     }
@@ -336,7 +332,7 @@ function validateBill(bill: BillModelInterface, requireID: boolean = false, requ
     throw new Error('Unable to add outlet to bill.')
   }
 
-  if (bill.payment_type === 'bank' && !isStringValid(bill.payment_bank_id)) {
+  if (!isStringValid(bill.payment_bank_id)) {
     throw new Error('Unable to add bank to bill.')
   }
 }

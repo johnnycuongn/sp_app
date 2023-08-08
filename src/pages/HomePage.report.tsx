@@ -47,14 +47,11 @@ export async function generateReport(year: number, bills: BillViewModelInterface
       report['Not paid'] += bill.total_payment
       return;
     }
-    if (bill.payment_type === 'cash') {
-      report['Cash'] += bill.total_payment
-    } 
-    else if (bill.payment_type === 'bank') {
-      if (bill.payment_bank_id && Boolean(banks.find(b => b.id === bill.payment_bank_id))) {
-        report[bill.payment_bank_id] += bill.total_payment
-      }
+
+    if (bill.payment_bank_id && Boolean(banks.find(b => b.id === bill.payment_bank_id))) {
+      report[bill.payment_bank_id] += bill.total_payment
     }
+    
   })
 
   // Get report in proper key name

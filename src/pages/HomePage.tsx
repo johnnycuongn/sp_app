@@ -251,7 +251,7 @@ export default function HomePage() {
                     </TableCell>
                     <TableCell component="th" scope="row" align="left" width={200}>{bill.supplier_name}</TableCell>
                     <TableCell component="th" scope="row" align="left" width={300}>
-                      {bill.payment_type === 'bank' ? `Bank (${bill.payment_bank_name})` : 'Cash'}
+                      {`${bill.payment_bank_name}`}
                     </TableCell>
                     <TableCell align="right">${bill.total_payment}</TableCell>
                     <TableCell align="right">{bill.payment_status}</TableCell>

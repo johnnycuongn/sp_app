@@ -19,7 +19,6 @@ export interface BillModelInterface {
   payment_date: Date
   total_payment: number
   payment_status: PaymentStatus
-  payment_type: PaymentType
   payment_bank_id?: string
   files_ref: string[]
   meta?: TimeMetaInterface
@@ -31,7 +30,6 @@ export interface BillViewModelInterface extends BillModelInterface {
 }
 
 export type PaymentStatus = 'paid' | 'not paid'
-export type PaymentType = 'bank' | 'cash'
 
 /**
  * Time Meta Object For Document
@@ -42,7 +40,6 @@ export interface TimeMetaInterface {
 }
 
 export const PAYMENT_STATUSES: PaymentStatus[] = ['paid', 'not paid']
-export const PAYMENT_TYPES: PaymentType[] = ['bank', 'cash']
 
 export interface SupplierModelInterface {
   id?: string

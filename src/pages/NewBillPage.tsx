@@ -5,7 +5,7 @@ import Select from 'react-select'
 import './NewBillPage.css'
 import { Error as ErrorIcon } from '@mui/icons-material';
 
-import { BankModelInterface, Bill, BillModelInterface, Outlet, OutletModelInterface, PAYMENT_STATUSES, PAYMENT_TYPES, PaymentStatus, PaymentType, SupplierModelInterface } from "../model";
+import { BankModelInterface, Bill, BillModelInterface, Outlet, OutletModelInterface, PAYMENT_STATUSES, PaymentStatus, SupplierModelInterface } from "../model";
 import { isNumeric, isStringValid } from "../utils/isValid";
 import { uppercaseFirst } from "../utils/string";
 import { mapBankToSelectOptions } from "./helper/helper";
@@ -30,7 +30,6 @@ export default function NewBillPage() {
     payment_date: new Date(),
     total_payment: 0,
     payment_status: 'paid',
-    payment_type: 'bank',
     payment_bank_id: '',
     files_ref: []
   })
@@ -46,16 +45,15 @@ export default function NewBillPage() {
 
   const isBillAddable: boolean = useMemo(() => {
     const isSupplierValid = isStringValid(bill.supplier_id)
-    const isBankValid = bill.payment_type === 'bank' && isStringValid(bill.payment_bank_id)
+    const isBankValid = isStringValid(bill.payment_bank_id)
 
     if (isSupplierValid && !isNaN(bill.total_payment) && bill.total_payment !== 0) {
-      if (bill.payment_type === 'cash') return true
       if (isBankValid) return true
       else return false
     }
 
     return false
-  }, [bill.supplier_id, bill.payment_type, bill.payment_bank_id, bill.total_payment])
+  }, [bill.supplier_id, bill.payment_bank_id, bill.total_payment])
 
 
   const isUpdating: boolean = useMemo(() => {
@@ -229,33 +227,15 @@ export default function NewBillPage() {
             setBill(o => {return {...o, outlet_id: option.outlet_id}}) 
 
             if (outlet.default_bank_id) {
-              setBill(o => {return {...o, payment_type:'bank', payment_bank_id: outlet.default_bank_id}})
+              setBill(o => {return {...o, payment_bank_id: outlet.default_bank_id}})
             }
             
           }
         }} 
       />
     </div>
-    <div className="input-box">
-      <label>Payment Type</label>
-      <MUISelect
-        defaultValue={'cash'}
-        label='Payment'
-        value={bill.payment_type}
-        onChange={(e) => {
-          if (e.target.value) {
-            setBill(o => {return {...o, payment_type: e.target.value as PaymentType}})
-          }
-        }}
-        size="small"
-      >
-        {PAYMENT_TYPES.map((type) => {
-          return <MenuItem value={type}>{uppercaseFirst(type.toString())}</MenuItem>
-        })}
-      </MUISelect>
-    </div>
     {
-      bill.payment_type === 'bank' && <div className="input-box">
+      <div className="input-box">
         <label>Bank Payment</label>
         <Select 
           // value={banks.find(b => b.id === bill.payment_bank_id)?.name ?? ''}

@@ -155,7 +155,7 @@ export default function OutletPage() {
       <Dialog
         open={pageState.outletModalOpen}
         onClose={() => handleCreatedOutletModal('close')}
-        maxWidth='lg'
+        fullScreen
         PaperProps={{
           sx: {
             // width: "50%",
