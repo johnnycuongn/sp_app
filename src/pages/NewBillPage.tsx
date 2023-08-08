@@ -166,7 +166,7 @@ export default function NewBillPage() {
       navigate('/', {state: location.state})
     } catch (e) {
       setPageState(o => {
-        return {...o, errorText: 'Unable to submit bill'}
+        return {...o, errorText: 'Failed to submit bill'}
       })
     } finally {
       setPageState(o => {return {...o, loading: false}})
@@ -226,7 +226,7 @@ export default function NewBillPage() {
           
           if (option && outlets.find(el => el.id === option.outlet_id) ) {
             const outlet = outlets.find(el => el.id === option.outlet_id)!
-            setBill(o => {return {...o, supplier_id: option.outlet_id}}) 
+            setBill(o => {return {...o, outlet_id: option.outlet_id}}) 
 
             if (outlet.default_bank_id) {
               setBill(o => {return {...o, payment_type:'bank', payment_bank_id: outlet.default_bank_id}})
