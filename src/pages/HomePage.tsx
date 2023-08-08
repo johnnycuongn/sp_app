@@ -146,30 +146,32 @@ export default function HomePage() {
   return (
     <div className="p-3">
       <h2>Bill Dashboard</h2>
-      <div id="timeline-bar" className="d-flex flex-row w-100">
-        <div className="dropdown d-flex flex-column">
-          <label className="dropdown">Year</label>
-          <button className="btn clear-hover dropdown-toggle me-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            {yearSelection}
-          </button>
-          <div className="dropdown-menu">
-            {getYearOptions(Bill.YEAR_INITAL).map((year) => {
-              return <button className="dropdown-item" type="button" onClick={() => handleYearSelectionChanged(year)}>{year}</button>
-            })}
+      <div id="timeline-bar" className="d-flex flex-column flex-sm-row w-100">
+        <div className="d-flex flex-shrink-1 me-2 mb-2">
+          <div className="dropdown d-flex flex-column w-xs-50">
+            <label className="dropdown">Year</label>
+            <button className="btn clear-hover dropdown-toggle me-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              {yearSelection}
+            </button>
+            <div className="dropdown-menu">
+              {getYearOptions(Bill.YEAR_INITAL).map((year) => {
+                return <button className="dropdown-item" type="button" onClick={() => handleYearSelectionChanged(year)}>{year}</button>
+              })}
+            </div>
+          </div>
+          <div className="dropdown d-flex flex-column">
+            <label className="dropdown">Range</label>
+            <button className="btn clear-hover dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              {uppercaseFirst(rangeSelection)}
+            </button>
+            <div className="dropdown-menu">
+              <button className="dropdown-item" type="button" onClick={() => handleRangeSelectionChanged('month')}>Month</button>
+              <button className="dropdown-item" type="button" onClick={() => handleRangeSelectionChanged('quarter')}>Quarter</button>
+              <button className="dropdown-item" type="button" onClick={() => handleRangeSelectionChanged('year')}>Year</button>
+            </div>
           </div>
         </div>
-        <div className="dropdown d-flex flex-column">
-          <label className="dropdown">Range</label>
-          <button className="btn clear-hover dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            {uppercaseFirst(rangeSelection)}
-          </button>
-          <div className="dropdown-menu">
-            <button className="dropdown-item" type="button" onClick={() => handleRangeSelectionChanged('month')}>Month</button>
-            <button className="dropdown-item" type="button" onClick={() => handleRangeSelectionChanged('quarter')}>Quarter</button>
-            <button className="dropdown-item" type="button" onClick={() => handleRangeSelectionChanged('year')}>Year</button>
-          </div>
-        </div>
-        <div className="horizontal-scrollable-container ms-3 align-items-end">
+        <div className="horizontal-scrollable-container mb-2 justify-content-start align-items-end">
             {rangeItems.map((item, i) => {
               let className = "range-item"
               if (i === selectedRangeItemIndex)
