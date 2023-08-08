@@ -143,13 +143,11 @@ export class Bill {
     return this.fromFirebaseSnapshot(billDocsSnapshot)
   }
 
-  static async update(billId: string, bill: BillModelInterface, files: File[]) {
+  static async update(billId: string, bill: BillModelInterface, new_files: File[], deleteFiles: boolean = false) {
     let OPERATIONS = []
 
     validateBill(bill, true, true)
-    console.log('Updating bill', billId);
 
-    if (bill.id) delete bill.id
     bill.meta = {
       created_at: bill.meta && bill.meta.created_at ? bill.meta.created_at : new Date(),
       updated_at: new Date()
@@ -162,41 +160,61 @@ export class Bill {
 
     removeEmpty(updatedBill)
 
-    let files_ref: string[] = []
+    const billStorageRef = storageOneBillRef(billId)
+    if (deleteFiles) {
+      // Delete images
+      const res = await listAll(billStorageRef)
+      res.items.forEach(fileRef => {
+        OPERATIONS.push(deleteObject(fileRef))
+      })
 
-    // Delete images
-    const res = await listAll(storageBillsRef)
-    res.items.forEach(fileRef => {
-      OPERATIONS.push(deleteObject(fileRef))
-    })
+      updatedBill.files_ref = []
+    }
+    else if (new_files.length !== 0) {
+      let files_ref: string[] = []
+      // Delete images
+      const res = await listAll(billStorageRef)
+      res.items.forEach(fileRef => {
+        OPERATIONS.push(deleteObject(fileRef))
+      })
 
-    // Upload images
-    files.forEach(file => {
-      const billStorageRef = storageOneBillRef(billId)
-      const fileRef = ref(billStorageRef, file.name)
+      // Upload images
+      new_files.forEach(file => {
+        const fileRef = ref(billStorageRef, file.name)
 
-      files_ref.push(fileRef.fullPath)
-      OPERATIONS.push(uploadBytes(fileRef, file))
-    })
+        files_ref.push(fileRef.fullPath)
+        OPERATIONS.push(uploadBytes(fileRef, file))
+      })
 
-    updatedBill.files_ref = files_ref
+      updatedBill.files_ref = files_ref
+    }
+
+    if (updatedBill.id) delete updatedBill.id
+
     OPERATIONS.push(updateDoc(billRef(billId), updatedBill))
     try {
       console.log('Data', updatedBill);
       await Promise.all(OPERATIONS)
     } catch (e) {
-      throw new Error('Unable to update bill' + billId)
+      throw new Error('Fail to update bill' + billId)
     }
   }
 
   static async delete(billId: string) {
-    if (!isStringValid(billId)) throw new Error('Invalid bill.')
+    if (!isStringValid(billId)) throw new Error('Bill Error 05: Invalid bill.')
 
-    let deleteOperations = []
-    deleteOperations.push(deleteDoc(billRef(billId)))
+    let DELETE_OPERATIONS = []
+    DELETE_OPERATIONS.push(deleteDoc(billRef(billId)))
+
+    // Delete images
+    const billStorageRef = storageOneBillRef(billId)
+    const res = await listAll(billStorageRef)
+    res.items.forEach(fileRef => {
+      DELETE_OPERATIONS.push(deleteObject(fileRef))
+    })
 
     try {
-      await Promise.all(deleteOperations)
+      await Promise.all(DELETE_OPERATIONS)
     } catch (e) {
       throw new Error('Unable to delete bill ' + billId)
     }
@@ -320,19 +338,19 @@ export class Bill {
 function validateBill(bill: BillModelInterface, requireID: boolean = false, requireSupplier: boolean = true) {
   const validId = bill.id && isStringValid(bill.id) 
   if (requireID) {
-    if (!validId) throw new Error('Require Bill Id')
+    if (!validId) throw new Error('Bill Error: Invalid Bill.')
   }
 
   const validSupplier = bill.supplier_id && isStringValid(bill.supplier_id)
   if (requireSupplier) {
-    if (!validSupplier) throw new Error('Require Supplier for Bill')
+    if (!validSupplier) throw new Error('Require Supplier for Bill.')
   }
 
   if (!isStringValid(bill.outlet_id)) {
-    throw new Error('Unable to add outlet to bill.')
+    throw new Error('Require outlet for Bill.')
   }
 
   if (!isStringValid(bill.payment_bank_id)) {
-    throw new Error('Unable to add payment to bill.')
+    throw new Error('Require payment for Bill.')
   }
 }

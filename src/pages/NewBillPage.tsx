@@ -155,7 +155,7 @@ export default function NewBillPage() {
 
     try {
       if (isUpdating) {
-        await Bill.update(id!, bill, uploadFiles)
+        await Bill.update(id!, bill, uploadFiles, selectedFilesContent.length === 0)
       }
       else {
         await Bill.create(bill, uploadFiles)
@@ -163,8 +163,11 @@ export default function NewBillPage() {
       console.log('Going to submit', location.state);
       navigate('/', {state: location.state})
     } catch (e) {
+      let message = ''
+      if (e instanceof Error) message = e.message
+      else message = String(e)
       setPageState(o => {
-        return {...o, errorText: 'Failed to submit bill'}
+        return {...o, errorText: message}
       })
     } finally {
       setPageState(o => {return {...o, loading: false}})
@@ -182,7 +185,7 @@ export default function NewBillPage() {
       navigate(-1)
     } catch (e) {
       setPageState(o => {
-        return {...o, errorText: 'Unable to delete bill'}
+        return {...o, errorText: 'Fail to delete bill'}
       })
     } finally {
       setPageState(o => {return {...o, loading: false}})
@@ -287,9 +290,9 @@ export default function NewBillPage() {
     </div>
 
     <div className="input-box">
-      <label>Images</label>  
-      <input className="form-control" type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef}/>
-      {selectedFilesContent.length !== 0 && <button className="" onClick={handleFileRemove}>Remove File</button>}
+      <label>Files</label>  
+      {selectedFilesContent.length === 0 && <input className="form-control" type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef}/>}
+      {selectedFilesContent.length !== 0 && <button className="btn" onClick={handleFileRemove}>Remove File</button>}
     </div>
 
     {selectedFilesContent.length !== 0 && 
