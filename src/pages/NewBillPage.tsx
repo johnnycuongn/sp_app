@@ -309,7 +309,7 @@ export default function NewBillPage() {
         await handleSubmitBill()
       }}
     >
-      {isUpdating ? 'Updating' : 'Add'} bill for {suppliers.find(s => s.id === bill.supplier_id)?.name}
+      {isUpdating ? 'Update' : 'Add'} bill for {suppliers.find(s => s.id === bill.supplier_id)?.name}
     </button>
     {isUpdating && 
       <button className="btn btn-delete mt-2"
