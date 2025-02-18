@@ -1,18 +1,24 @@
 # Supplier Receipt Trakcer
 
-This website helps users to track their receipt, both digital and physical invoices. Users will have a dashboard to understand the financial health.
-
-Developeed for Industries: Retail, Manufactoring, Construction, Hospitality
-
 <p>
-<img src="https://github.com/johnnycuongn/sp_app/blob/master/github_resources/poster.png" width="100%">
+<img src="https://github.com/johnnycuongn/sp_app/blob/master/github_resources/poster.png" width="100%" alt="Receipt Tracker Poster">
 </p>
 
-## Features
-- Monthy, Quarterly and Yearly Report
-- Upload image for each invoice
-- Track suppliers, payments and outlets
+## Overview
 
+The Supplier Receipt Tracker is designed to streamline invoice management for businesses in Retail, Manufacturing, Construction, and Hospitality sectors. This intuitive platform helps users track both digital and physical invoices, providing a comprehensive dashboard to monitor financial health.
+
+#### 🏭 Industries Served
+- Retail
+- Manufacturing
+- Construction
+- Hospitality
+
+#### 💡 Features 
+- Simplify your invoice management process
+- Gain insights into your financial health with detailed reports
+- Reduce errors and improve accuracy in payment tracking
+- Save time and resources with our efficient, user-friendly interface
 
 ## Author
-Duc Cuong Nguyen
+Designed and built by Duc Cuong Nguyen
