@@ -64,6 +64,21 @@ This replaces the previous static-cache pattern (`Bill.suppliers`, `Bill.payment
 
 `src/App.routes.tsx` gates access in two stages: while `loading` is true it renders nothing; unauthenticated users only ever see `LoginPage`; authenticated users hit `AdminRoute`, which requires `isAdmin` (role `type === 'admin'`). Roles are `admin` and `outlet_manager` (`RoleType` in `src/api/types.ts`), though only admin routing is wired up today. Routes: `/` (dashboard), `/bill/new`, `/bill/:id/edit` (both `NewBillPage`), `/supplier`, `/payment`, `/outlet`.
 
+### Layout and mobile chrome
+
+This app is **mobile-first**, but renders on the desktop too. `AppLayout` (`src/components/AppLayout.tsx`) wraps every authenticated route and switches chrome based on `useMediaQuery(theme.breakpoints.down("md"))`:
+
+- **Mobile (xs/sm)** — compact top app bar with the brand name + `MobileBottomNav` (4 tabs: Bills / Suppliers / Outlets / Payments). Detail pages (anything matching `/bill/...`) hide the bottom nav and render `DetailHeader` instead, which is a sticky `AppBar` with a back arrow.
+- **Desktop (md+)** — the standard top `AppNavigationBar` only; no bottom nav.
+
+The chrome leaves room for iOS safe-area insets (`env(safe-area-inset-top|bottom)`) so the app behaves correctly when installed as a PWA or wrapped in Capacitor. Three helpers in `MobileBottomNav.tsx` make adapting a page to the mobile layout one-liners:
+
+- `useMobileBottomPadding()` — returns the bottom padding a scrolling page needs so its last row isn't covered by the bottom nav.
+- `bottomFixedOffsetSx()` — `sx` fragment for fixed-position elements (FAB, sticky form footers) so they sit above the bottom nav.
+- `MobileFab` — primary-action FAB that auto-hides on desktop. Use this for "New X" buttons on every top-level page.
+
+For form pages (`NewBillPage`), the submit button lives in a **sticky bottom footer** (`<StickyFooter>` inside the page) so it's reachable with one thumb on a phone; the body content gets `pb: 12` to clear it. Lookup-table forms (Supplier/Payment/Outlet) use a shared `CrudDialog` (exported from `SupplierPage.tsx`) that becomes a full-screen Slide-up dialog with an app bar on mobile, and a centered modal on desktop.
+
 ## Important gotchas
 
 - **`isDev` flag**: `src/services/firebase/config.ts` has a hardcoded `const isDev = true` that switches the whole app between the dev project (`sinhphu-dev`) and production (`sinhphu-78dae`). The Firebase web config (including `apiKey`) for both is committed in source — expected for Firebase web clients, but `npm run deploy:production` deploys hosting to prod regardless of this flag.

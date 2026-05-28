@@ -7,19 +7,28 @@ import {
   Card,
   CardActionArea,
   CardContent,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Grid,
   LinearProgress,
   Stack,
   TextField,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material"
 import { Add as AddIcon } from "@mui/icons-material"
 
-import { Outlet, OutletInput, createOutlet, deleteOutlet, getOutlet, listOutlets, updateOutlet, useLookups } from "../api"
+import {
+  Outlet,
+  OutletInput,
+  createOutlet,
+  deleteOutlet,
+  getOutlet,
+  listOutlets,
+  updateOutlet,
+  useLookups,
+} from "../api"
+import MobileFab from "../components/MobileFab"
+import { CrudDialog } from "./SupplierPage"
 
 const emptyOutlet: OutletInput = {
   name: "",
@@ -28,6 +37,8 @@ const emptyOutlet: OutletInput = {
 }
 
 export default function OutletPage() {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"))
   const { payments, refresh: refreshLookups } = useLookups()
 
   const [outlets, setOutlets] = useState<Outlet[]>([])
@@ -127,14 +138,16 @@ export default function OutletPage() {
         sx={{ mb: 2 }}
       >
         <Typography variant="h2">Outlets</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
-          New outlet
-        </Button>
+        {!isMobile && (
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
+            New outlet
+          </Button>
+        )}
       </Stack>
 
       {loading && <LinearProgress sx={{ mb: 2 }} />}
 
-      <Grid container spacing={2}>
+      <Grid container spacing={{ xs: 1.5, md: 2 }}>
         {outlets.map((o) => (
           <Grid item xs={12} sm={6} md={4} key={o.id}>
             <Card>
@@ -163,63 +176,51 @@ export default function OutletPage() {
         ))}
       </Grid>
 
-      <Dialog open={modalOpen} onClose={close} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingId ? "Outlet information" : "Add new outlet"}
-        </DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              label="Name"
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              autoFocus
-              fullWidth
-            />
-            <TextField
-              label="Description"
-              value={form.description}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, description: e.target.value }))
-              }
-              multiline
-              rows={3}
-              fullWidth
-            />
-            <Autocomplete
-              options={payments}
-              value={defaultPaymentOption}
-              getOptionLabel={(o) => o.name}
-              isOptionEqualToValue={(a, b) => a.id === b.id}
-              onChange={(_, v) =>
-                setForm((f) => ({ ...f, default_payment_id: v?.id ?? "" }))
-              }
-              renderInput={(params) => (
-                <TextField {...params} label="Default payment method" />
-              )}
-            />
-            {modalError && <Alert severity="error">{modalError}</Alert>}
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={close} disabled={modalLoading}>
-            Cancel
-          </Button>
-          {editingId && (
-            <Button color="error" onClick={onDelete} disabled={modalLoading}>
-              Delete
-            </Button>
-          )}
-          <Button
-            variant="contained"
-            onClick={onSave}
-            disabled={modalLoading || !form.name.trim()}
-          >
-            {editingId ? "Save" : "Create"}
-          </Button>
-        </DialogActions>
-        {modalLoading && <LinearProgress />}
-      </Dialog>
+      <CrudDialog
+        open={modalOpen}
+        onClose={close}
+        title={editingId ? "Outlet" : "New outlet"}
+        loading={modalLoading}
+        onSave={onSave}
+        onDelete={editingId ? onDelete : undefined}
+        saveDisabled={!form.name.trim()}
+        saveLabel={editingId ? "Save" : "Create"}
+      >
+        <Stack spacing={2} sx={{ mt: 1 }}>
+          <TextField
+            label="Name"
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            autoFocus
+            fullWidth
+          />
+          <TextField
+            label="Description"
+            value={form.description}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, description: e.target.value }))
+            }
+            multiline
+            rows={3}
+            fullWidth
+          />
+          <Autocomplete
+            options={payments}
+            value={defaultPaymentOption}
+            getOptionLabel={(o) => o.name}
+            isOptionEqualToValue={(a, b) => a.id === b.id}
+            onChange={(_, v) =>
+              setForm((f) => ({ ...f, default_payment_id: v?.id ?? "" }))
+            }
+            renderInput={(params) => (
+              <TextField {...params} label="Default payment method" />
+            )}
+          />
+          {modalError && <Alert severity="error">{modalError}</Alert>}
+        </Stack>
+      </CrudDialog>
+
+      <MobileFab onClick={openCreate} icon={<AddIcon />} label="New outlet" />
     </Box>
   )
 }

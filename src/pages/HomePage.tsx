@@ -21,11 +21,10 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material"
-import {
-  Add as AddIcon,
-  ReceiptLong as ReceiptIcon,
-} from "@mui/icons-material"
+import { Add as AddIcon } from "@mui/icons-material"
 import {
   Bar,
   BarChart,
@@ -37,7 +36,9 @@ import {
 } from "recharts"
 
 import { Bill, listBillsForYear, useLookups } from "../api"
-import { formatMoney, BRAND_PRIMARY } from "../theme"
+import { BRAND_PRIMARY, formatMoney } from "../theme"
+import BillCard from "../components/BillCard"
+import MobileFab from "../components/MobileFab"
 import {
   RangeKind,
   filterBillsInRange,
@@ -45,7 +46,6 @@ import {
   rangeOptionsFor,
   totalSum,
 } from "./HomePage.report"
-import "./HomePage.css"
 
 interface PageState {
   year: number
@@ -71,6 +71,8 @@ function reducer(state: PageState, action: Action): PageState {
 
 export default function HomePage() {
   const navigate = useNavigate()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"))
   const { payments, earliestBillYear, supplierName, outletName, paymentName } =
     useLookups()
 
@@ -84,7 +86,6 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  // Refetch bills whenever the year changes.
   useEffect(() => {
     let cancelled = false
     setLoading(true)
@@ -105,7 +106,6 @@ export default function HomePage() {
   }, [year])
 
   const rangeOptions = useMemo(() => rangeOptionsFor(year, kind), [year, kind])
-  // Default the selected range item to the last (most recent) entry.
   const effectiveRangeIndex =
     rangeIndex === -1 ? rangeOptions.length - 1 : rangeIndex
   const selectedRange = rangeOptions[effectiveRangeIndex] ?? rangeOptions[0]
@@ -114,7 +114,6 @@ export default function HomePage() {
     () => (selectedRange ? filterBillsInRange(bills, selectedRange) : []),
     [bills, selectedRange]
   )
-
   const breakdown = useMemo(
     () => paymentBreakdown(billsInRange, payments),
     [billsInRange, payments]
@@ -136,57 +135,60 @@ export default function HomePage() {
         spacing={1.5}
         sx={{ mb: 2 }}
       >
-        <Typography variant="h2">Bill Dashboard</Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate("/bill/new")}
-        >
-          New bill
-        </Button>
+        <Typography variant="h2">Bills</Typography>
+        {!isMobile && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate("/bill/new")}
+          >
+            New bill
+          </Button>
+        )}
       </Stack>
 
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          spacing={2}
-          alignItems={{ xs: "stretch", md: "center" }}
-        >
-          <TextField
-            select
-            label="Year"
-            value={year}
-            size="small"
-            sx={{ minWidth: 120 }}
-            onChange={(e) =>
-              dispatch({ type: "setYear", year: Number(e.target.value) })
-            }
-          >
-            {yearOptions.map((y) => (
-              <MenuItem key={y} value={y}>
-                {y}
-              </MenuItem>
-            ))}
-          </TextField>
-          <ToggleButtonGroup
-            size="small"
-            exclusive
-            value={kind}
-            onChange={(_, v: RangeKind | null) =>
-              v && dispatch({ type: "setKind", kind: v })
-            }
-          >
-            <ToggleButton value="month">Month</ToggleButton>
-            <ToggleButton value="quarter">Quarter</ToggleButton>
-            <ToggleButton value="year">Year</ToggleButton>
-          </ToggleButtonGroup>
+      <Paper sx={{ p: { xs: 1.5, md: 2 }, mb: 2 }}>
+        <Stack spacing={1.5}>
+          <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+            <TextField
+              select
+              label="Year"
+              value={year}
+              size="small"
+              sx={{ minWidth: 100 }}
+              onChange={(e) =>
+                dispatch({ type: "setYear", year: Number(e.target.value) })
+              }
+            >
+              {yearOptions.map((y) => (
+                <MenuItem key={y} value={y}>
+                  {y}
+                </MenuItem>
+              ))}
+            </TextField>
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={kind}
+              onChange={(_, v: RangeKind | null) =>
+                v && dispatch({ type: "setKind", kind: v })
+              }
+            >
+              <ToggleButton value="month">Month</ToggleButton>
+              <ToggleButton value="quarter">Quarter</ToggleButton>
+              <ToggleButton value="year">Year</ToggleButton>
+            </ToggleButtonGroup>
+          </Stack>
           <Box
             sx={{
               display: "flex",
-              flexWrap: "wrap",
               gap: 1,
-              flex: 1,
-              overflowX: "auto",
+              flexWrap: { xs: "nowrap", md: "wrap" },
+              overflowX: { xs: "auto", md: "visible" },
+              pb: { xs: 0.5, md: 0 },
+              // hide scrollbar on mobile
+              "&::-webkit-scrollbar": { display: "none" },
+              scrollbarWidth: "none",
             }}
           >
             {rangeOptions.map((opt, i) => (
@@ -195,7 +197,7 @@ export default function HomePage() {
                 label={opt.label}
                 color={i === effectiveRangeIndex ? "primary" : "default"}
                 onClick={() => dispatch({ type: "setRangeIndex", index: i })}
-                sx={{ borderRadius: 1.5 }}
+                sx={{ borderRadius: 1.5, flexShrink: 0 }}
               />
             ))}
           </Box>
@@ -264,72 +266,89 @@ export default function HomePage() {
         </Card>
       </Stack>
 
-      <Paper sx={{ overflow: "hidden" }}>
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-          sx={{ px: 2, py: 1.5, borderBottom: "1px solid #e6e8ef" }}
-        >
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <ReceiptIcon color="action" />
-            <Typography variant="h6">Bills</Typography>
-          </Stack>
+      {isMobile ? (
+        <Stack spacing={1}>
+          {billsInRange.length === 0 && !loading && (
+            <Paper sx={{ p: 4, textAlign: "center" }}>
+              <Typography variant="body2" color="text.secondary">
+                No bills in this range.
+              </Typography>
+            </Paper>
+          )}
+          {billsInRange.map((bill) => (
+            <BillCard
+              key={bill.id}
+              bill={bill}
+              supplierName={supplierName(bill.supplier_id)}
+              outletName={outletName(bill.outlet_id)}
+              paymentName={paymentName(bill.payment_bank_id)}
+              onClick={() => navigate(`/bill/${bill.id}/edit`)}
+            />
+          ))}
         </Stack>
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Date</TableCell>
-                <TableCell>Supplier</TableCell>
-                <TableCell>Outlet</TableCell>
-                <TableCell>Payment</TableCell>
-                <TableCell align="right">Total</TableCell>
-                <TableCell align="right">Status</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {billsInRange.length === 0 && !loading && (
+      ) : (
+        <Paper sx={{ overflow: "hidden" }}>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      No bills in this range.
-                    </Typography>
-                  </TableCell>
+                  <TableCell>Date</TableCell>
+                  <TableCell>Supplier</TableCell>
+                  <TableCell>Outlet</TableCell>
+                  <TableCell>Payment</TableCell>
+                  <TableCell align="right">Total</TableCell>
+                  <TableCell align="right">Status</TableCell>
                 </TableRow>
-              )}
-              {billsInRange.map((bill) => (
-                <TableRow
-                  key={bill.id}
-                  hover
-                  onClick={() => navigate(`/bill/${bill.id}/edit`)}
-                  sx={{ cursor: "pointer" }}
-                >
-                  <TableCell>
-                    {bill.payment_date.toLocaleDateString("en-GB")}
-                  </TableCell>
-                  <TableCell>{supplierName(bill.supplier_id)}</TableCell>
-                  <TableCell>{outletName(bill.outlet_id)}</TableCell>
-                  <TableCell>{paymentName(bill.payment_bank_id)}</TableCell>
-                  <TableCell align="right">
-                    {formatMoney(bill.total_payment)}
-                  </TableCell>
-                  <TableCell align="right">
-                    <Chip
-                      label={bill.payment_status}
-                      size="small"
-                      color={
-                        bill.payment_status === "paid" ? "success" : "warning"
-                      }
-                      variant="outlined"
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+              </TableHead>
+              <TableBody>
+                {billsInRange.length === 0 && !loading && (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        No bills in this range.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+                {billsInRange.map((bill) => (
+                  <TableRow
+                    key={bill.id}
+                    hover
+                    onClick={() => navigate(`/bill/${bill.id}/edit`)}
+                    sx={{ cursor: "pointer" }}
+                  >
+                    <TableCell>
+                      {bill.payment_date.toLocaleDateString("en-GB")}
+                    </TableCell>
+                    <TableCell>{supplierName(bill.supplier_id)}</TableCell>
+                    <TableCell>{outletName(bill.outlet_id)}</TableCell>
+                    <TableCell>{paymentName(bill.payment_bank_id)}</TableCell>
+                    <TableCell align="right">
+                      {formatMoney(bill.total_payment)}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Chip
+                        label={bill.payment_status}
+                        size="small"
+                        color={
+                          bill.payment_status === "paid" ? "success" : "warning"
+                        }
+                        variant="outlined"
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      )}
+
+      <MobileFab
+        onClick={() => navigate("/bill/new")}
+        icon={<AddIcon />}
+        label="New bill"
+      />
     </Box>
   )
 }

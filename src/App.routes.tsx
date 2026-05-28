@@ -1,6 +1,6 @@
 import { Navigate, Outlet, Route, Routes } from "react-router-dom"
 import { useAuth } from "./api"
-import AppNavigationBar from "./App.navbar"
+import AppLayout from "./components/AppLayout"
 import LoginPage from "./pages/LoginPage"
 import HomePage from "./pages/HomePage"
 import SupplierPage from "./pages/SupplierPage"
@@ -15,8 +15,7 @@ export default function AppRoutes() {
   if (currentUser == null) return <LoginPage />
 
   return (
-    <>
-      <AppNavigationBar />
+    <AppLayout>
       <Routes>
         <Route element={<AdminRoute />}>
           <Route path="/" element={<HomePage />} />
@@ -31,7 +30,7 @@ export default function AppRoutes() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </>
+    </AppLayout>
   )
 }
 

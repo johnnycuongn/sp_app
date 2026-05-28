@@ -1,4 +1,4 @@
-import React, { MouseEventHandler } from "react"
+import React from "react"
 import {
   AppBar,
   Avatar,
@@ -12,74 +12,65 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material"
-import MenuIcon from "@mui/icons-material/Menu"
 import { useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "./api"
 
 const NAV_ITEMS: { label: string; path: string }[] = [
-  { label: "Dashboard", path: "/" },
-  { label: "Supplier", path: "/supplier" },
-  { label: "Payment", path: "/payment" },
-  { label: "Outlet", path: "/outlet" },
+  { label: "Bills", path: "/" },
+  { label: "Suppliers", path: "/supplier" },
+  { label: "Outlets", path: "/outlet" },
+  { label: "Payments", path: "/payment" },
 ]
 
+/**
+ * Desktop-only top navigation bar. On mobile we render
+ * `MobileBottomNav` + a compact sticky header instead — see `AppLayout`.
+ */
 export default function AppNavigationBar() {
   const navigate = useNavigate()
   const location = useLocation()
   const { logout } = useAuth()
 
-  const [anchorElNav, setAnchorElNav] = React.useState<Element | null>(null)
   const [anchorElUser, setAnchorElUser] = React.useState<Element | null>(null)
-
-  const handleOpenNavMenu: React.MouseEventHandler = (e) =>
-    setAnchorElNav(e.currentTarget)
-  const handleCloseNavMenu = () => setAnchorElNav(null)
-  const handleOpenUserMenu: React.MouseEventHandler = (e) =>
+  const openUserMenu: React.MouseEventHandler = (e) =>
     setAnchorElUser(e.currentTarget)
-  const handleCloseUserMenu = () => setAnchorElUser(null)
-
-  const go = (path: string) => {
-    navigate(path)
-    handleCloseNavMenu()
-  }
+  const closeUserMenu = () => setAnchorElUser(null)
 
   const isActive = (path: string) =>
     path === "/" ? location.pathname === "/" : location.pathname.startsWith(path)
 
   return (
-    <AppBar sx={{ backgroundColor: "primary.main" }} position="static">
+    <AppBar
+      position="sticky"
+      elevation={0}
+      sx={{ bgcolor: "primary.main", display: { xs: "none", md: "block" } }}
+    >
       <Container maxWidth="xl">
         <Toolbar disableGutters>
           <Typography
             variant="h6"
             sx={{
-              mr: 3,
-              display: { xs: "none", md: "flex" },
+              mr: 4,
               color: "white",
               fontWeight: 700,
               letterSpacing: 0.5,
+              cursor: "pointer",
             }}
+            onClick={() => navigate("/")}
           >
             Sinh Phu
           </Typography>
 
-          <SmallScreenNav
-            anchorElNav={anchorElNav}
-            open={handleOpenNavMenu}
-            close={handleCloseNavMenu}
-            onGo={go}
-          />
-
-          <Box sx={{ flexGrow: 1, display: { xs: "none", md: "flex" } }}>
+          <Box sx={{ flexGrow: 1, display: "flex" }}>
             {NAV_ITEMS.map((item) => (
               <Button
                 key={item.path}
-                onClick={() => go(item.path)}
+                onClick={() => navigate(item.path)}
                 sx={{
-                  my: 2,
+                  my: 1,
                   mx: 0.5,
                   color: "white",
-                  opacity: isActive(item.path) ? 1 : 0.75,
+                  opacity: isActive(item.path) ? 1 : 0.7,
                   borderBottom: isActive(item.path)
                     ? "2px solid white"
                     : "2px solid transparent",
@@ -91,9 +82,9 @@ export default function AppNavigationBar() {
             ))}
           </Box>
 
-          <Box sx={{ flexGrow: 0 }}>
-            <Tooltip title="Open settings">
-              <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
+          <Box>
+            <Tooltip title="Account">
+              <IconButton onClick={openUserMenu} sx={{ p: 0 }}>
                 <Avatar alt="User" src="" />
               </IconButton>
             </Tooltip>
@@ -104,52 +95,20 @@ export default function AppNavigationBar() {
               keepMounted
               transformOrigin={{ vertical: "top", horizontal: "right" }}
               open={Boolean(anchorElUser)}
-              onClose={handleCloseUserMenu}
+              onClose={closeUserMenu}
             >
               <MenuItem
                 onClick={async () => {
-                  handleCloseUserMenu()
+                  closeUserMenu()
                   await logout()
                 }}
               >
-                <Typography textAlign="center">Logout</Typography>
+                Logout
               </MenuItem>
             </Menu>
           </Box>
         </Toolbar>
       </Container>
     </AppBar>
-  )
-}
-
-interface SmallScreenNavProps {
-  open: MouseEventHandler
-  close: () => void
-  anchorElNav: Element | null
-  onGo: (path: string) => void
-}
-
-function SmallScreenNav({ open, anchorElNav, close, onGo }: SmallScreenNavProps) {
-  return (
-    <Box sx={{ flexGrow: 1, display: { xs: "flex", md: "none" } }}>
-      <IconButton size="large" onClick={open} color="inherit" aria-label="menu">
-        <MenuIcon />
-      </IconButton>
-      <Menu
-        anchorEl={anchorElNav}
-        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-        keepMounted
-        transformOrigin={{ vertical: "top", horizontal: "left" }}
-        open={Boolean(anchorElNav)}
-        onClose={close}
-        sx={{ display: { xs: "block", md: "none" } }}
-      >
-        {NAV_ITEMS.map((item) => (
-          <MenuItem key={item.path} onClick={() => onGo(item.path)}>
-            <Typography textAlign="center">{item.label}</Typography>
-          </MenuItem>
-        ))}
-      </Menu>
-    </Box>
   )
 }
