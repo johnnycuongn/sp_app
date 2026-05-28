@@ -1,296 +1,210 @@
-import React, { useState, useEffect, useMemo } from "react";
-import './general.css'
+import { useEffect, useState } from "react"
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardActionArea,
+  CardContent,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Grid,
+  LinearProgress,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material"
+import { Add as AddIcon } from "@mui/icons-material"
 
-import { Grid, Paper, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, IconButton, Menu, CircularProgress, LinearProgress } from "@mui/material";
-import { Error as ErrorIcon } from '@mui/icons-material';
-import CreatableSelect from 'react-select/creatable';
+import { Supplier, SupplierInput, createSupplier, deleteSupplier, getSupplier, listSuppliers, updateSupplier, useLookups } from "../api"
 
-import { Supplier, SupplierMain, SupplierModelInterface } from "../model";
-import { isStringValid } from "../utils/isValid";
+const emptySupplier: SupplierInput = { name: "", description: "", category: "" }
 
 export default function SupplierPage() {
+  const { refresh: refreshLookups } = useLookups()
 
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const [loading, setLoading] = useState(false)
 
-  const [supplier, setSupplier] = useState<SupplierModelInterface>({name: '', description: '', category: ''})
-  const [suppliers, setSuppliers] = useState<SupplierModelInterface[]>([])
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalLoading, setModalLoading] = useState(false)
+  const [modalError, setModalError] = useState("")
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [form, setForm] = useState<SupplierInput>(emptySupplier)
 
-  const [categories, setCategories] = useState<string[]>([])
-  const categoriesOptions: Option[] = useMemo(() => {
-    return categories.map((c,i) => {
-      return {
-        id: `${i}`,
-        label: c,
-        value: c
-      }
-    })
-  }, [JSON.stringify(categories)])
-  const [selectedCategory, setSelectedCategory] = useState<string | null>('')
-
-  const [pageState, setPageState] = React.useState({
-    supplierModalOpen: false,
-    modalLoading: false,
-    modalErrorText: '',
-
-    categoriesSelectLoading: false
-  });
+  const fetchAll = async () => {
+    setLoading(true)
+    try {
+      setSuppliers(await listSuppliers())
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    init()
+    fetchAll()
   }, [])
 
-
-  async function init() {
-    await getAllSuppliers()
-    const categoriesData = await SupplierMain.getCategories()
-    setCategories(categoriesData)
+  const openCreate = () => {
+    setEditingId(null)
+    setForm(emptySupplier)
+    setModalError("")
+    setModalOpen(true)
   }
 
-  const getAllSuppliers = async () => {
-    const data = await Supplier.getAll()
-
-    setSuppliers(() => [...data])
-  }
-
-  const handleCreateCategory = async (inputValue: string) => {
-    setPageState(o => {return {...o, categoriesSelectLoading: true}})
-    // const newOption = createOption(inputValue);
-    console.log('Input value categort', inputValue);
-    // await SupplierMain.updateCategories([...categories, inputValue])
-    
-    // const new_categories = await SupplierMain.getCategories()
-    // setCategories(new_categories)
-    setSelectedCategory(inputValue)
-
-
-    setPageState(o => {return {...o, categoriesSelectLoading: false}})
-
-  }
-
-  const handleCreateSupplier = async () => {
+  const openEdit = async (id: string) => {
+    setEditingId(id)
+    setModalError("")
+    setModalOpen(true)
+    setModalLoading(true)
     try {
-      setPageState(o => {return {...o, modalLoading: true }})
-      console.log('Creating Supplier' + JSON.stringify(supplier));
-      await Supplier.create(supplier)
-
-      await getAllSuppliers()
-      handleCreatedSupplierModal('close')
-    } catch (e) {
-      handleModalError(e)
-    } finally {
-      setPageState(o => {return {...o, modalLoading: false }})
-    }
-  }
-
-  const handleDeleteSupplier = async () => {
-    try {
-      setPageState(o => {return {...o, modalLoading: true }})
-
-      await Supplier.delete(supplier.id ?? '')
-
-      await getAllSuppliers()
-      handleCreatedSupplierModal('close')
-    } catch (e) {
-      handleModalError(e)
-    } finally {
-      setPageState(o => {return {...o, modalLoading: false }})
-    }
-  }
-
-
-  const handleUpdateSupplier = async () => {
-    try {
-      setPageState(o => {return {...o, modalLoading: true }})
-
-      if (!isStringValid(supplier.id)) throw new Error('Invalid Supplier')
-      await Supplier.update(supplier.id!, supplier)
-
-      await getAllSuppliers()
-      await handleCreatedSupplierModal('close')
-    } catch (e) {
-      handleModalError(e)
-    } finally {
-      setPageState(o => {return {...o, modalLoading: false }})
-    }
-  }
-
-
-  const handleCreatedSupplierModal = async (state: 'open' | 'close', supplierId?: string) => {
-    if (state === 'close') {
-      setPageState((state) => { return {...state, supplierModalOpen: false, modalLoading: false, modalErrorText: '' }})
-      setSupplier({ name: '', description: '', category: ''})
-    }
-    else {
-      setPageState((state) => { return {...state, supplierModalOpen: true }})
-
-      if (isStringValid(supplierId)) {
-        const updatedSupplier = await Supplier.get(supplierId ?? '')
-
-        if (updatedSupplier) setSupplier(updatedSupplier)
+      const existing = await getSupplier(id)
+      if (existing) {
+        const { id: _drop, ...rest } = existing
+        setForm(rest)
       }
+    } catch (e) {
+      setModalError(asMessage(e))
+    } finally {
+      setModalLoading(false)
     }
   }
 
-  const handleModalError = (error: any) => {
-
-    let message = isStringValid(supplier.id) ? 'Fail to update supplier' : 'Fail to create supplier'
-    console.log(error);
-    setPageState((o) => {
-
-      return {
-        ...o,
-        modalErrorText: message
-      }
-    })
+  const close = () => {
+    setModalOpen(false)
+    setEditingId(null)
+    setForm(emptySupplier)
+    setModalError("")
   }
 
+  const onSave = async () => {
+    setModalLoading(true)
+    setModalError("")
+    try {
+      if (editingId) await updateSupplier(editingId, form)
+      else await createSupplier(form)
+      await Promise.all([fetchAll(), refreshLookups()])
+      close()
+    } catch (e) {
+      setModalError(asMessage(e))
+    } finally {
+      setModalLoading(false)
+    }
+  }
+
+  const onDelete = async () => {
+    if (!editingId) return
+    if (!window.confirm("Delete this supplier?")) return
+    setModalLoading(true)
+    setModalError("")
+    try {
+      await deleteSupplier(editingId)
+      await Promise.all([fetchAll(), refreshLookups()])
+      close()
+    } catch (e) {
+      setModalError(asMessage(e))
+    } finally {
+      setModalLoading(false)
+    }
+  }
 
   return (
-    <div className="p-3">
-      <div id="supplier_bar" className="d-flex flex-row justify-content-between mb-3">
-        <div className="d-flex flex-row">
-          <h2 className="me-2">Supplier</h2> 
-          <button className="clear-hover" onClick={() => handleCreatedSupplierModal('open')}>
-            + new supplier
-          </button>
-        </div>
-      </div>
-      <div id="suppliers_layout" className="">
-        <Grid container spacing={{ xs: 2, md: 3 }} columns={{ xs: 2, sm: 8, md: 12 }}>
-          {suppliers.map((supplierItem, index) => (
-            <Grid item xs={2} sm={4} md={4} key={supplierItem.id}>
-              <div className="grid-item d-flex flex-row"
-                onClick={() => {
-                  handleCreatedSupplierModal('open', supplierItem.id)
-                }}
-              >
-                <Stack className="flex-grow-1">
-                  <h6 style={{borderBottom: '0.1px solid gainsboro'}}>{supplierItem.name}</h6>
-                  <p>{supplierItem.description}</p>
-                </Stack>
-                {/* <div className="flex-shrink-1">
-                  <IconButton>
-                    <MoreHoriz />
-                  </IconButton>
-                </div> */}
-              </div>
-            </Grid>
-          ))}
-        </Grid>
-      </div>
-      <Dialog
-        open={pageState.supplierModalOpen}
-        onClose={() => handleCreatedSupplierModal('close')}
-        maxWidth='lg'
-        PaperProps={{
-          sx: {
-            // minHeight: "60vh"
-          }
-        }}
+    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1200, mx: "auto" }}>
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        sx={{ mb: 2 }}
       >
+        <Typography variant="h2">Suppliers</Typography>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
+          New supplier
+        </Button>
+      </Stack>
+
+      {loading && <LinearProgress sx={{ mb: 2 }} />}
+
+      <Grid container spacing={2}>
+        {suppliers.map((s) => (
+          <Grid item xs={12} sm={6} md={4} key={s.id}>
+            <Card>
+              <CardActionArea onClick={() => openEdit(s.id)}>
+                <CardContent sx={{ minHeight: 92 }}>
+                  <Typography variant="h6" sx={{ mb: 0.5 }}>
+                    {s.name}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                    }}
+                  >
+                    {s.description || "No description"}
+                  </Typography>
+                </CardContent>
+              </CardActionArea>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+      <Dialog open={modalOpen} onClose={close} maxWidth="sm" fullWidth>
         <DialogTitle>
-          { supplier.id ? 'Supplier Information' : 'Add new supplier'}
+          {editingId ? "Supplier information" : "Add new supplier"}
         </DialogTitle>
         <DialogContent>
-          <TextField className="mb-3" id="supplier_name" label="Name" variant="standard" fullWidth
-            value={supplier.name}
-            onChange={(e) => {
-              setSupplier((o) => {
-                return {
-                  ...o,
-                  name: e.target.value
-                }
-              })
-            }}
-          />
-          <TextField className="mb-3" id="outlined-multiline-flexible" label="Description" variant="standard" multiline rows={4} fullWidth
-            value={supplier.description}
-            onChange={(e) => {
-              setSupplier((o) => {
-                return {
-                  ...o,
-                  description: e.target.value
-                }
-              })
-            }}
-          />
-          {/* <CreatableSelect 
-            isClearable
-            isDisabled={pageState.categoriesSelectLoading}
-            isLoading={pageState.categoriesSelectLoading}
-            onChange={(newValue) => setSelectedCategory(newValue)}
-            onCreateOption={handleCreateCategory}
-            options={categoriesOptions}
-            value={selectedCategory}
-          /> */}
-          {isStringValid(pageState.modalErrorText) && 
-            <div className="error">
-              <ErrorIcon className="me-1" />
-              {pageState.modalErrorText}
-            </div>
-          }
-          
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label="Name"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              autoFocus
+              fullWidth
+            />
+            <TextField
+              label="Description"
+              value={form.description}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, description: e.target.value }))
+              }
+              multiline
+              rows={3}
+              fullWidth
+            />
+            {modalError && <Alert severity="error">{modalError}</Alert>}
+          </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button sx={{color: 'grey'}} onClick={() => handleCreatedSupplierModal('close')}
-            hidden={pageState.modalLoading}
-            disabled={pageState.modalLoading}
-          >
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={close} disabled={modalLoading}>
             Cancel
+          </Button>
+          {editingId && (
+            <Button color="error" onClick={onDelete} disabled={modalLoading}>
+              Delete
             </Button>
-          {supplier.id ? 
-            (<>
-              <Button
-                sx={{
-                  color: 'red'
-                }}
-                onClick={async (e) => {
-                  await handleDeleteSupplier()
-                }}
-                disabled={pageState.modalLoading}
-                hidden={pageState.modalLoading}
-              >
-                Delete
-              </Button>
-              
-              <button
-                className="btn btn-submit hover"
-                onClick={async (e) => {
-                  await handleUpdateSupplier()
-                }}
-                disabled={pageState.modalLoading}
-                hidden={pageState.modalLoading}
-              >
-                Update
-              </button>
-            </>)
-          :
-          <button
-            className="btn btn-submit hover"
-            onClick={async (e) => {
-              await handleCreateSupplier()
-            }}
-            disabled={pageState.modalLoading}
-            hidden={pageState.modalLoading}
+          )}
+          <Button
+            variant="contained"
+            onClick={onSave}
+            disabled={modalLoading || !form.name.trim()}
           >
-            Create
-          </button>
-          }
+            {editingId ? "Save" : "Create"}
+          </Button>
         </DialogActions>
-        {pageState.modalLoading && <LinearProgress />}
+        {modalLoading && <LinearProgress />}
       </Dialog>
-
-    </div>
+    </Box>
   )
 }
 
-interface Option {
-  readonly id: string;
-  readonly label: string;
-  readonly value: string;
+function asMessage(e: unknown): string {
+  if (e instanceof Error) return e.message
+  return String(e)
 }
-
-
-const createOption = (label: string) => ({
-  label,
-  value: label.toLowerCase().replace(/\W/g, ''),
-});
