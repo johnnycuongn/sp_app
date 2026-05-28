@@ -1,380 +1,561 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { FilledInput, FormControl, InputLabel, TextField, InputAdornment, Stack, Grid, Select as MUISelect, MenuItem, LinearProgress, Menu } from "@mui/material";
-import Select from 'react-select'
-import './NewBillPage.css'
-import { Error as ErrorIcon } from '@mui/icons-material';
+import React, { useEffect, useMemo, useRef, useState } from "react"
+import { useLocation, useNavigate, useParams } from "react-router-dom"
+import {
+  Alert,
+  Autocomplete,
+  Box,
+  Button,
+  Dialog,
+  IconButton,
+  InputAdornment,
+  LinearProgress,
+  MenuItem,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material"
+import {
+  Close as CloseIcon,
+  CloudUpload as CloudUploadIcon,
+  Delete as DeleteIcon,
+} from "@mui/icons-material"
 
-import { PaymentModelInterface, Bill, BillModelInterface, Outlet, OutletModelInterface, PAYMENT_STATUSES, PaymentStatus, SupplierModelInterface } from "../model";
-import { isNumeric, isStringValid } from "../utils/isValid";
-import { uppercaseFirst } from "../utils/string";
-import { mapPaymentToSelectOptions } from "./helper/helper";
+import {
+  BillInput,
+  PAYMENT_STATUSES,
+  PaymentStatus,
+  createBill,
+  deleteBill,
+  getBill,
+  getBillFileUrls,
+  updateBill,
+  useLookups,
+} from "../api"
+import DetailHeader from "../components/DetailHeader"
+import { uppercaseFirst } from "../utils/string"
 
+interface ReceiptSlot {
+  key: string
+  url: string
+  existingPath?: string
+  newFile?: File
+  name: string
+}
+
+const emptyBill = (): BillInput => ({
+  supplier_id: "",
+  user_id: "",
+  outlet_id: "",
+  payment_date: new Date(),
+  total_payment: 0,
+  payment_status: "paid",
+  payment_bank_id: "",
+  files_ref: [],
+})
 
 export default function NewBillPage() {
-
-  const location = useLocation()
-
-  const [pageState, setPageState] = useState({
-    loading: false,
-    errorText: ''
-  })
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const navigate = useNavigate()
-
-  const [bill, setBill] = useState<BillModelInterface>({
-    id: '',
-    supplier_id: '',
-    user_id: '',
-    outlet_id: '',
-    payment_date: new Date(),
-    total_payment: 0,
-    payment_status: 'paid',
-    payment_bank_id: '',
-    files_ref: []
-  })
-
-  const [suppliers, setSuppliers] = useState<SupplierModelInterface[]>([])
-  const [payments, setPayments] = useState<PaymentModelInterface[]>([])
-  const [outlets, setOutlets] = useState<OutletModelInterface[]>([])
-
-  const [selectedFilesContent, setSelectedFilesContent] = useState<(string)[]>([])
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-
+  const location = useLocation()
   const { id } = useParams()
+  const isUpdating = Boolean(id)
 
-  const isBillAddable: boolean = useMemo(() => {
-    const isSupplierValid = isStringValid(bill.supplier_id)
-    const isPaymentValid = isStringValid(bill.payment_bank_id)
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"))
+  const { suppliers, outlets, payments, refresh } = useLookups()
 
-    if (isSupplierValid && !isNaN(bill.total_payment) && bill.total_payment !== 0) {
-      if (isPaymentValid) return true
-      else return false
-    }
+  const [bill, setBill] = useState<BillInput>(emptyBill())
+  const [slots, setSlots] = useState<ReceiptSlot[]>([])
+  const [removedPaths, setRemovedPaths] = useState<string[]>([])
+  const [loading, setLoading] = useState(false)
+  const [errorText, setErrorText] = useState("")
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-    return false
-  }, [bill.supplier_id, bill.payment_bank_id, bill.total_payment])
-
-
-  const isUpdating: boolean = useMemo(() => {
-    return isStringValid(id)
-  }, [id])
+  const fieldErrors = useMemo(() => {
+    const e: Partial<Record<keyof BillInput, string>> = {}
+    if (!bill.supplier_id) e.supplier_id = "Select a supplier"
+    if (!bill.outlet_id) e.outlet_id = "Select an outlet"
+    if (!bill.payment_bank_id) e.payment_bank_id = "Select a payment method"
+    if (isNaN(bill.total_payment)) e.total_payment = "Enter a valid amount"
+    return e
+  }, [bill])
+  const isSubmittable = Object.keys(fieldErrors).length === 0
 
   useEffect(() => {
-    init()
-    console.log('Run once new bill page');
-    console.log(location.state);
-  }, [])
-
-  async function init() {
-    setPageLoading(true)
-    await Bill._initialize()
-    // get all suppliers
-    const supplierData = Bill.suppliers
-    setSuppliers(() => [...supplierData])
-
-    // get all payments
-    const paymentsData = await Bill.payments
-    setPayments(() => [...paymentsData])
-
-    const outletData = await Outlet.getAll()
-    setOutlets(() => [...outletData])
-
-    if (isUpdating) {
-      const updatingBill = await Bill.get(id!)
-
-      if (updatingBill) {
-        setBill(updatingBill)
-
-        const urls = await Bill.downloadFiles(updatingBill)
-        console.log('Files', urls);
-        setSelectedFilesContent(urls)
+    let cancelled = false
+    async function load() {
+      if (!id) return
+      setLoading(true)
+      try {
+        const existing = await getBill(id)
+        if (cancelled || !existing) return
+        const { id: _drop, ...rest } = existing
+        setBill(rest)
+        const urls = await getBillFileUrls(existing)
+        if (cancelled) return
+        setSlots(
+          urls.map((url, i) => ({
+            key: `existing-${i}`,
+            url,
+            existingPath: existing.files_ref[i],
+            name: existing.files_ref[i]?.split("/").pop() ?? "Receipt",
+          }))
+        )
+      } catch (e) {
+        if (!cancelled) setErrorText(asMessage(e))
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-
     }
-    setPageLoading(false)
-  }
-
-  /**
-   * @dateString {string} dd-mm-yyyy from date input 
-   */
-  const handlDateChanged = (dateString: string) => {
-    const date = new Date(dateString)
-    console.log(date);
-    setBill(o => {return {
-      ...o,
-      payment_date: date
-    }})
-  }
-
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files) return
-
-    const file = event.target.files[0];
-
-    console.log('File Changed');
-    console.log(file);
-
-    setSelectedFile(file)
-
-    // Render on page
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (!event.target) return
-      const contents = event.target.result as string;
-
-      let array: string[] = []
-
-      array.push(contents)
-
-      setSelectedFilesContent(array)
-    };
-    reader.readAsDataURL(file);
-  }
-
-  const handleFileRemove = async () => {
-    setSelectedFilesContent([])
-    setSelectedFile(null)
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    load()
+    return () => {
+      cancelled = true
     }
-  }
+  }, [id])
 
+  const supplierOption = useMemo(
+    () => suppliers.find((s) => s.id === bill.supplier_id) ?? null,
+    [suppliers, bill.supplier_id]
+  )
+  const outletOption = useMemo(
+    () => outlets.find((o) => o.id === bill.outlet_id) ?? null,
+    [outlets, bill.outlet_id]
+  )
+  const paymentOption = useMemo(
+    () => payments.find((p) => p.id === bill.payment_bank_id) ?? null,
+    [payments, bill.payment_bank_id]
+  )
 
-  const handleSubmitBill = async () => {
-    setPageState(o => {
-      return {...o, errorText: ''}
+  const onPickFiles: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+    const files = e.target.files ? Array.from(e.target.files) : []
+    if (files.length === 0) return
+    Promise.all(files.map(readAsDataUrl)).then((dataUrls) => {
+      setSlots((prev) => [
+        ...prev,
+        ...files.map((f, i) => ({
+          key: `new-${Date.now()}-${i}`,
+          url: dataUrls[i],
+          newFile: f,
+          name: f.name,
+        })),
+      ])
     })
-    setPageLoading(true)
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
 
-    // Validate bill
-    console.log('Submitting bill');
-    console.log(JSON.stringify(bill));
-    console.log('Files', selectedFilesContent);
+  const removeSlot = (slot: ReceiptSlot) => {
+    setSlots((prev) => prev.filter((s) => s.key !== slot.key))
+    if (slot.existingPath) {
+      setRemovedPaths((prev) => [...prev, slot.existingPath!])
+    }
+  }
 
-    const uploadFiles = selectedFile ? [selectedFile] : []
-
+  const onSubmit = async () => {
+    setErrorText("")
+    setLoading(true)
     try {
+      const newFiles = slots
+        .map((s) => s.newFile)
+        .filter((f): f is File => Boolean(f))
       if (isUpdating) {
-        await Bill.update(id!, bill, uploadFiles, selectedFilesContent.length === 0)
+        await updateBill(id!, bill, { newFiles, removedPaths })
+      } else {
+        await createBill(bill, newFiles)
       }
-      else {
-        await Bill.create(bill, uploadFiles)
-      }
-      console.log('Going to submit', location.state);
-      navigate('/', {state: location.state})
+      await refresh()
+      navigate("/", { state: location.state })
     } catch (e) {
-      let message = ''
-      if (e instanceof Error) message = e.message
-      else message = String(e)
-      setPageState(o => {
-        return {...o, errorText: message}
-      })
+      setErrorText(asMessage(e))
     } finally {
-      setPageLoading(false)
+      setLoading(false)
     }
   }
 
-  const handleDeleteBill = async () => {
-    setPageState(o => {
-      return {...o, errorText: ''}
-    })
-    setPageLoading(true)
-
+  const onDelete = async () => {
+    if (!id) return
+    if (!window.confirm("Delete this bill and its attached receipts?")) return
+    setErrorText("")
+    setLoading(true)
     try {
-      await Bill.delete(id!)
+      await deleteBill(id)
       navigate(-1)
     } catch (e) {
-      setPageState(o => {
-        return {...o, errorText: 'Fail to delete bill'}
-      })
+      setErrorText(asMessage(e))
     } finally {
-      setPageLoading(false)
+      setLoading(false)
     }
   }
 
-  const setPageLoading = (loading: boolean) => {
-    setPageState(o => {return {...o, loading: loading}})
-  }
+  const headerTitle = isUpdating ? "Edit Bill" : "New Bill"
+  const formContent = (
+    <Stack spacing={2.5}>
+      <TextField
+        label="Payment date"
+        type="date"
+        value={toDateInputValue(bill.payment_date)}
+        onChange={(e) =>
+          setBill((b) => ({
+            ...b,
+            payment_date: e.target.value
+              ? new Date(e.target.value)
+              : b.payment_date,
+          }))
+        }
+        InputLabelProps={{ shrink: true }}
+        fullWidth
+        disabled={loading}
+      />
+
+      <Autocomplete
+        options={suppliers}
+        value={supplierOption}
+        disabled={loading}
+        getOptionLabel={(o) => o.name}
+        isOptionEqualToValue={(a, b) => a.id === b.id}
+        onChange={(_, v) =>
+          setBill((b) => ({ ...b, supplier_id: v?.id ?? "" }))
+        }
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            label="Supplier"
+            required
+            error={Boolean(fieldErrors.supplier_id)}
+            helperText={fieldErrors.supplier_id}
+          />
+        )}
+      />
+
+      <Autocomplete
+        options={outlets}
+        value={outletOption}
+        disabled={loading}
+        getOptionLabel={(o) => o.name}
+        isOptionEqualToValue={(a, b) => a.id === b.id}
+        onChange={(_, v) =>
+          setBill((b) => ({
+            ...b,
+            outlet_id: v?.id ?? "",
+            payment_bank_id:
+              v?.default_payment_id && !b.payment_bank_id
+                ? v.default_payment_id
+                : b.payment_bank_id,
+          }))
+        }
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            label="Outlet"
+            required
+            error={Boolean(fieldErrors.outlet_id)}
+            helperText={fieldErrors.outlet_id}
+          />
+        )}
+      />
+
+      <Autocomplete
+        options={payments}
+        value={paymentOption}
+        disabled={loading}
+        getOptionLabel={(o) => o.name}
+        isOptionEqualToValue={(a, b) => a.id === b.id}
+        onChange={(_, v) =>
+          setBill((b) => ({ ...b, payment_bank_id: v?.id ?? "" }))
+        }
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            label="Payment method"
+            required
+            error={Boolean(fieldErrors.payment_bank_id)}
+            helperText={fieldErrors.payment_bank_id}
+          />
+        )}
+      />
+
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+        <TextField
+          label="Total amount"
+          type="number"
+          value={isNaN(bill.total_payment) ? "" : bill.total_payment}
+          onChange={(e) =>
+            setBill((b) => ({
+              ...b,
+              total_payment:
+                e.target.value === "" ? NaN : parseFloat(e.target.value),
+            }))
+          }
+          InputProps={{
+            startAdornment: <InputAdornment position="start">$</InputAdornment>,
+            inputProps: { min: 0, step: "0.01", inputMode: "decimal" },
+          }}
+          error={Boolean(fieldErrors.total_payment)}
+          helperText={fieldErrors.total_payment}
+          fullWidth
+          disabled={loading}
+        />
+        <TextField
+          select
+          label="Status"
+          value={bill.payment_status}
+          onChange={(e) =>
+            setBill((b) => ({
+              ...b,
+              payment_status: e.target.value as PaymentStatus,
+            }))
+          }
+          fullWidth
+          disabled={loading}
+        >
+          {PAYMENT_STATUSES.map((status) => (
+            <MenuItem key={status} value={status}>
+              {uppercaseFirst(status)}
+            </MenuItem>
+          ))}
+        </TextField>
+      </Stack>
+
+      <ReceiptDropZone
+        slots={slots}
+        disabled={loading}
+        onPick={() => fileInputRef.current?.click()}
+        onRemove={removeSlot}
+        onPreview={(url) => setPreviewUrl(url)}
+      />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        onChange={onPickFiles}
+      />
+
+      {errorText && <Alert severity="error">{errorText}</Alert>}
+
+      {isUpdating && !isMobile && (
+        <Button
+          variant="outlined"
+          color="error"
+          size="large"
+          onClick={onDelete}
+          disabled={loading}
+          startIcon={<DeleteIcon />}
+          sx={{ alignSelf: "flex-start" }}
+        >
+          Delete bill
+        </Button>
+      )}
+    </Stack>
+  )
 
   return (
-  <div className="p-3">
-    {<h2>{isUpdating ? 'Updating Bill' :'New Bill'}</h2>}
-    <div className="input-box">
-      <label className="me-2">Payment Date</label>
-      <input type="date" name="" id="" 
-        defaultValue={new Date().toISOString().substring(0,10)}
-        value={bill.payment_date.toISOString().substring(0,10)}
-        onChange={(e) => {
-          handlDateChanged(e.target.value);
-        }}
+    <Box sx={{ pb: { xs: 12, md: 4 } /* room for sticky footer on mobile */ }}>
+      <DetailHeader
+        title={headerTitle}
+        rightAction={
+          isUpdating && isMobile ? (
+            <IconButton
+              onClick={onDelete}
+              disabled={loading}
+              sx={{ color: "white" }}
+              aria-label="Delete bill"
+            >
+              <DeleteIcon />
+            </IconButton>
+          ) : undefined
+        }
       />
-    </div>
-    <div className="input-box">
-      <label>Supplier</label>
-      <Select className="select"
-        isDisabled={pageState.loading}
-        value={mapSuppliersToSelectOptions(suppliers).filter(option => option.supplier_id === bill.supplier_id)[0]} 
-        options={mapSuppliersToSelectOptions(suppliers)} onChange={(option) => {
-          if (option && suppliers.find(el => el.id === option.supplier_id)) {
-            setBill(o => {return {...o, supplier_id: option.supplier_id}})
-          }
-        }} 
-      />
-    </div>
-    <div className="input-box">
-      <label>Outlet</label>
-      <Select className="select"
-        isDisabled={pageState.loading}
-        value={mapOutletsToSelectOptions(outlets).filter(option => option.outlet_id === bill.outlet_id)[0]} 
-        options={mapOutletsToSelectOptions(outlets)} 
-        onChange={(option) => {
-          
-          if (option && outlets.find(el => el.id === option.outlet_id) ) {
-            const outlet = outlets.find(el => el.id === option.outlet_id)!
-            setBill(o => {return {...o, outlet_id: option.outlet_id}}) 
 
-            if (outlet.default_payment_id) {
-              setBill(o => {return {...o, payment_bank_id: outlet.default_payment_id}})
-            }
-            
-          }
-        }} 
-      />
-    </div>
-    {
-      <div className="input-box">
-        <label>Payment</label>
-        <Select 
-          isDisabled={pageState.loading}
-          value={mapPaymentToSelectOptions(payments).filter(b => b.payment_id === bill.payment_bank_id)[0]}
-          options={mapPaymentToSelectOptions(payments)}
-          onChange={(option) => {
-            if (option && payments.find(b => b.id === option.payment_id)) {
-              setBill(o => {return {
-                ...o,
-                payment_bank_id: option.payment_id
-              }})
-            }
-          }}
-        />
-      </div>
-    }
-    <div className="input-box">
-      <label>Payment Amount</label>
-      <TextField
-        id="standard-start-adornment"
-        sx={{ m: 1, width: '25ch' }}
-        InputProps={{
-          startAdornment: <InputAdornment position="start">$</InputAdornment>,
-        }}
-        variant="standard"
-        type="number"
-        value={bill.total_payment}
-        onChange={(e) => {
-          setBill(o => {return {...o, total_payment: parseFloat(e.target.value)}})
-        }}
-      />
-    </div>
-    <div className="input-box">
-      <label>Payment Status</label>
-      <MUISelect
-        defaultValue={'paid'}
-        label='Status'
-        value={bill.payment_status}
-        onChange={(e) => {
-          if (e.target.value) {
-            setBill(o => {return {...o, payment_status: e.target.value as PaymentStatus}})
-          }
-        }}
-        size="small"
+      {loading && <LinearProgress />}
+
+      <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 900, mx: "auto" }}>
+        {isMobile ? (
+          <Box sx={{ pt: 1 }}>{formContent}</Box>
+        ) : (
+          <Paper sx={{ p: 3 }}>{formContent}</Paper>
+        )}
+      </Box>
+
+      <StickyFooter>
+        <Button
+          variant="contained"
+          size="large"
+          onClick={onSubmit}
+          disabled={loading || !isSubmittable}
+          fullWidth
+        >
+          {isUpdating ? "Save changes" : "Add bill"}
+        </Button>
+      </StickyFooter>
+
+      <Dialog
+        open={Boolean(previewUrl)}
+        onClose={() => setPreviewUrl(null)}
+        maxWidth="lg"
+        fullWidth
       >
-        {PAYMENT_STATUSES.map((status) => {
-          return <MenuItem value={status}>{uppercaseFirst(status.toString())}</MenuItem>
-        })}
-      </MUISelect>
-    </div>
+        <Box sx={{ position: "relative" }}>
+          <IconButton
+            onClick={() => setPreviewUrl(null)}
+            sx={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              bgcolor: "rgba(255,255,255,0.7)",
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+          {previewUrl && (
+            <Box
+              component="img"
+              src={previewUrl}
+              alt="Receipt preview"
+              sx={{ display: "block", width: "100%", height: "auto" }}
+            />
+          )}
+        </Box>
+      </Dialog>
+    </Box>
+  )
+}
 
-    <div className="input-box">
-      <label>Files</label>  
-      {selectedFilesContent.length === 0 && <input className="form-control" type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef}/>}
-      {selectedFilesContent.length !== 0 && <button className="btn btn-secondary" onClick={handleFileRemove}>Remove File</button>}
-    </div>
-
-    {selectedFilesContent.length !== 0 && 
-    <>
-      <img style={{border: '1px solid gainsboro'}} className="p-2" width={'20%'} height='auto' src={selectedFilesContent[0]!}  alt="Attachment" data-bs-toggle="modal" data-bs-target="#myModal"/>
-
-      <div className="modal fade" id="myModal" tabIndex={-1} role="dialog" aria-labelledby="myModalLabel">
-        <div className="modal-dialog modal-lg" role="document">
-          <div className="modal-content">
-            <div className="modal-header justify-content-end">
-              <button type="button" className="close" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-            </div>
-            <div className="modal-body">
-              <img src={selectedFilesContent[0]!} alt="Large Image" width="100%" height="auto"/>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-    }
-    <hr />
-    {isStringValid(pageState.errorText) && 
-      <div className="error">
-        <ErrorIcon className="me-1" />
-        {pageState.errorText}
-      </div>
-    }
-    <button className="btn btn-submit hover w-100 mt-2"
-      disabled={pageState.loading || !isBillAddable}
-      hidden={pageState.loading}
-      onClick={async () => {
-        await handleSubmitBill()
+function StickyFooter({ children }: { children: React.ReactNode }) {
+  return (
+    <Paper
+      elevation={3}
+      sx={{
+        position: "fixed",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        p: 2,
+        pb: `calc(16px + env(safe-area-inset-bottom))`,
+        borderRadius: 0,
+        borderTop: "1px solid #e6e8ef",
+        zIndex: (t) => t.zIndex.appBar,
+        bgcolor: "background.paper",
       }}
     >
-      {isUpdating ? 'Update' : 'Add'} bill for {suppliers.find(s => s.id === bill.supplier_id)?.name}
-    </button>
-    {isUpdating && 
-      <button className="btn btn-delete mt-2"
-        disabled={pageState.loading}
-        hidden={pageState.loading}
-        onClick={async () => {
-          await handleDeleteBill()
-        }}
+      <Box sx={{ maxWidth: 900, mx: "auto" }}>{children}</Box>
+    </Paper>
+  )
+}
+
+interface ReceiptDropZoneProps {
+  slots: ReceiptSlot[]
+  disabled: boolean
+  onPick: () => void
+  onRemove: (slot: ReceiptSlot) => void
+  onPreview: (url: string) => void
+}
+
+function ReceiptDropZone({
+  slots,
+  disabled,
+  onPick,
+  onRemove,
+  onPreview,
+}: ReceiptDropZoneProps) {
+  return (
+    <Box>
+      <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
+        Receipts
+      </Typography>
+      <Stack
+        direction="row"
+        spacing={1.5}
+        flexWrap="wrap"
+        useFlexGap
+        sx={{ alignItems: "flex-start" }}
       >
-        Delete
-      </button>}
-    {pageState.loading && <LinearProgress className="main-color" />}
-  </div>)
+        {slots.map((slot) => (
+          <Box
+            key={slot.key}
+            sx={{
+              position: "relative",
+              width: 110,
+              height: 110,
+              borderRadius: 2,
+              overflow: "hidden",
+              border: "1px solid #e6e8ef",
+              cursor: "pointer",
+              "&:hover .receipt-remove": { opacity: 1 },
+            }}
+            onClick={() => onPreview(slot.url)}
+          >
+            <Box
+              component="img"
+              src={slot.url}
+              alt={slot.name}
+              sx={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+              }}
+            />
+            <IconButton
+              className="receipt-remove"
+              size="small"
+              disabled={disabled}
+              onClick={(e) => {
+                e.stopPropagation()
+                onRemove(slot)
+              }}
+              sx={{
+                position: "absolute",
+                top: 4,
+                right: 4,
+                bgcolor: "rgba(255,255,255,0.85)",
+                opacity: { xs: 1, sm: 0 },
+                transition: "opacity 0.15s",
+                "&:hover": { bgcolor: "rgba(255,255,255,1)" },
+              }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        ))}
+        <Button
+          variant="outlined"
+          onClick={onPick}
+          disabled={disabled}
+          startIcon={<CloudUploadIcon />}
+          sx={{
+            width: 110,
+            height: 110,
+            borderStyle: "dashed",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          Add
+        </Button>
+      </Stack>
+    </Box>
+  )
 }
 
-function mapOutletsToSelectOptions(outlets: OutletModelInterface[]): {
-  outlet_id: string,
-  value: string,
-  label: string
-}[] {
-  return outlets.map((outlet) => {
-    return {
-      outlet_id: outlet.id ?? '',
-      value: outlet.id ?? '',
-      label: outlet.name
-    }
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => resolve(e.target?.result as string)
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
   })
 }
 
-function mapSuppliersToSelectOptions(suppliers: SupplierModelInterface[]): {
-  supplier_id: string,
-  value: string,
-  label: string
-}[] {
-  return suppliers.map((supplier) => {
+function toDateInputValue(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
 
-    return {
-      supplier_id: supplier.id ?? '',
-      value: supplier.id ?? '',
-      label: supplier.name
-    }
-  })
+function asMessage(e: unknown): string {
+  if (e instanceof Error) return e.message
+  return String(e)
 }

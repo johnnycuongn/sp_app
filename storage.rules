@@ -1,12 +1,13 @@
 rules_version = '2';
 
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if false;
+    // Receipt images for bills live under /bills/{billId}/...
+    // Any signed-in user can read and write here. Per-bill ownership is
+    // not enforced because firestore.rules itself is "any signed-in user"
+    // (see CLAUDE.md). Tighten both together if you add finer roles.
+    match /bills/{billId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }

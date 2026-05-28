@@ -1,6 +1,6 @@
 {
-  "short_name": "Sinh hPhu App",
-  "name": "Sinh Phu App",
+  "short_name": "Sinh Phu",
+  "name": "Sinh Phu - Receipt Tracker",
   "icons": [
     {
       "src": "logo512.jpg",
@@ -10,6 +10,7 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "orientation": "portrait",
+  "theme_color": "#36394c",
+  "background_color": "#f7f8fb"
 }

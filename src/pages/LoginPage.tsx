@@ -1,98 +1,92 @@
-import { useState } from 'react';
-
+import { useState } from "react"
 import {
+  Alert,
+  Box,
   Button,
-  FormControl,
-  Grid,
   Grow,
   Paper,
+  Stack,
   TextField,
   Typography,
-} from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import { loginUser } from '../model';
-import { useAuth } from '../model/Auth';
+} from "@mui/material"
 
+import { useAuth } from "../api"
 
-const LoginPage = () => {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('');
-
-  const navigate = useNavigate()
-
+export default function LoginPage() {
   const { login, loading } = useAuth()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
+  const [submitting, setSubmitting] = useState(false)
 
-  const handleLogin = async () => {
-    console.log('Username ' + email);
-    await login(email, password)
-
-    console.log('Successful lo gin ');
-    // navigate('/');
-  };
+  const onSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault()
+    setError("")
+    setSubmitting(true)
+    try {
+      await login(email, password)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
-    <>
-      <Grid
-        container
-        spacing={3}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        {/* small device full, beyond that half */}
-        <Grid item style={{ marginTop: 150 }}>
-          <Grow in timeout={1500}>
-            <Paper elevation={3} style={{ padding: 50, textAlign: 'center' }}>
-              {/* if loading, show lottie, else display form */}
-              {loading === false ? (
-                <>
-                  {/* <img
-                    src={Logo}
-                    alt="logo"
-                    style={{ width: 200, alignSelf: 'center' }}
-                  /> */}
-                  <form style={{ flexGrow: 1 }} noValidate autoComplete="off">
-                    <h4>Login</h4>
-                    <div style={{ flexDirection: 'column', display: 'flex' }}>
-                      <TextField
-                        id="1"
-                        label="Email"
-                        variant="outlined"
-                        value={email}
-                        placeholder="johndoe@example.com"
-                        onChange={(text) => setEmail(text.target.value)}
-                        style={{ margin: 10 }}
-                      />
-                      <TextField
-                        id="2"
-                        label="Password"
-                        variant="outlined"
-                        value={password}
-                        onChange={(text) => setPassword(text.target.value)}
-                        type="password"
-                        style={{ margin: 10 }}
-                      />
-                    </div>
-                  </form>
-                  <Button
-                    variant="contained"
-                    style={{ color: 'white' }}
-                    onClick={handleLogin}
-                  >
-                    Login
-                  </Button>
-                </>
-              ) : (
-                <>Loading</>
-              )}
-            </Paper>
-          </Grow>
-        </Grid>
-      </Grid>
-    </>
-  );
-};
-
-export default LoginPage;
+    <Box
+      sx={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        bgcolor: "background.default",
+        p: 2,
+      }}
+    >
+      <Grow in timeout={600}>
+        <Paper sx={{ p: { xs: 3, sm: 5 }, width: "100%", maxWidth: 400 }}>
+          <Stack spacing={3} component="form" onSubmit={onSubmit}>
+            <Box sx={{ textAlign: "center" }}>
+              <Typography variant="h2" sx={{ mb: 0.5 }}>
+                Sinh Phu
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Receipt tracker — sign in to continue
+              </Typography>
+            </Box>
+            <TextField
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              autoComplete="email"
+              autoFocus
+              fullWidth
+              disabled={loading || submitting}
+            />
+            <TextField
+              label="Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              fullWidth
+              disabled={loading || submitting}
+            />
+            {error && <Alert severity="error">{error}</Alert>}
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              disabled={loading || submitting || !email || !password}
+              fullWidth
+            >
+              {submitting ? "Signing in…" : "Sign in"}
+            </Button>
+          </Stack>
+        </Paper>
+      </Grow>
+    </Box>
+  )
+}

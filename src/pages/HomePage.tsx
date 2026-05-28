@@ -1,302 +1,354 @@
-import React, { useEffect, useMemo, useState } from "react";
-import './HomePage.css'
-import './general.css'
-import { Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, LinearProgress } from "@mui/material";
-import { Bill, BillModelInterface, BillViewModelInterface } from "../model";
-import { getMonthsOfYear, getQuarterFor } from "../utils/date";
-import { uppercaseFirst } from "../utils/string";
-import { useLocation, useNavigate } from "react-router-dom";
-import { isStringValid } from "../utils/isValid";
-import { generateReport, getQuarterDates } from "./HomePage.report";
-import { numberWithCommas } from "../utils/number";
+import { useEffect, useMemo, useReducer, useState } from "react"
+import { useNavigate } from "react-router-dom"
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  LinearProgress,
+  MenuItem,
+  Paper,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material"
+import { Add as AddIcon } from "@mui/icons-material"
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  XAxis,
+  YAxis,
+} from "recharts"
 
+import { Bill, listBillsForYear, useLookups } from "../api"
+import { BRAND_PRIMARY, formatMoney } from "../theme"
+import BillCard from "../components/BillCard"
+import MobileFab from "../components/MobileFab"
+import {
+  RangeKind,
+  filterBillsInRange,
+  paymentBreakdown,
+  rangeOptionsFor,
+  totalSum,
+} from "./HomePage.report"
 
+interface PageState {
+  year: number
+  kind: RangeKind
+  rangeIndex: number
+}
+
+type Action =
+  | { type: "setYear"; year: number }
+  | { type: "setKind"; kind: RangeKind }
+  | { type: "setRangeIndex"; index: number }
+
+function reducer(state: PageState, action: Action): PageState {
+  switch (action.type) {
+    case "setYear":
+      return { year: action.year, kind: "quarter", rangeIndex: -1 }
+    case "setKind":
+      return { ...state, kind: action.kind, rangeIndex: -1 }
+    case "setRangeIndex":
+      return { ...state, rangeIndex: action.index }
+  }
+}
 
 export default function HomePage() {
+  const navigate = useNavigate()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"))
+  const { payments, earliestBillYear, supplierName, outletName, paymentName } =
+    useLookups()
 
-  const currentDate = new Date()
-  const location = useLocation()
-
-  const [pageState, setPageState] = useState({
-    reportLoading: false
+  const [{ year, kind, rangeIndex }, dispatch] = useReducer(reducer, {
+    year: new Date().getFullYear(),
+    kind: "quarter",
+    rangeIndex: -1,
   })
 
-  /** 
-   * Get: Get bills for year, do not use this on UI
-   * Set: Set only when year is changed
-   */
-  const [billsForAYear, setBillsForAYear] = useState<BillViewModelInterface[]>([])
-  const [billsForReport, setBillsForReport] = useState<BillViewModelInterface[]>([])
-
-  const [yearSelection, setYearSelection] = useState(new Date().getFullYear())
-  const [rangeSelection, setRangeSelection] = useState<RangeOption>('quarter')
-
-  const [rangeItems, setRangeItems] = useState<string[]>(getQuarterOptions(yearSelection))
-  const [selectedRangeItemIndex, setSelectedRangeItemIndex] = useState<number>(rangeItems.length-1)
-
-  const [paymentReport, setPaymentReport] = useState<{[k: string]: number}>({})
-
-  const navigate = useNavigate()
+  const [bills, setBills] = useState<Bill[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
   useEffect(() => {
-    setRangeItems(getQuarterOptions(yearSelection))
-    console.log('init');
-    console.log(location.state);
-    init()
-  }, [])
-
-  const init = async () => {
-    setPageState((s) => {return {...s, reportLoading: true}})
-    await Bill._initialize()
-    const data = await Bill.getBillsForYear(yearSelection)
-
-    setBillsForAYear(data)
-    console.log('Init data', data);
-    await updateReport2(yearSelection, rangeSelection, selectedRangeItemIndex, data)
-    setPageState((s) => {return {...s, reportLoading: false}})
-  }
-
-  /**
-   * @param bills bills for current year. Usually `billsAtYear` or new updated bills
-   * 
-   * @Note `All @param` Don't pass in state value, unless it is not changed within same function
-   */
-  const updateReport2 = async (year: number, range: RangeOption, rangeItemIndex: number, bills: BillViewModelInterface[]) => {
-    console.log('UpdateReport2', bills);
-    setPageState((s) => {return {...s, reportLoading: true}})
-    let billsUpdated = bills.filter((bill) => {
-      if (range === 'month') {
-        const date = new Date(year, rangeItemIndex, 1);
-        let startDateOfMonth = new Date(date.getFullYear(), date.getMonth(), 1, 0, 0,0);
-        let endDateOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59);
-
-        return bill.payment_date > startDateOfMonth && bill.payment_date < endDateOfMonth
-      } else if (range === 'quarter') {
-        const {start: startDateOfQuarter, end: endDateOfQuarter } = getQuarterDates(year, rangeItemIndex)
-        return bill.payment_date > startDateOfQuarter && bill.payment_date < endDateOfQuarter
-      }
-
-      return true
-    })
-
-    setBillsForReport(() => [...billsUpdated])
-    console.log('updateReport2 - billsUpdate', billsUpdated);
-    const report = await generateReport(year, billsUpdated, range, rangeItemIndex)
-    setPaymentReport(report)
-    setPageState((s) => {return {...s, reportLoading: false}})
-  }
-
-  const handleYearSelectionChanged = async (selection: number) => {
-    console.log('Handle year selection changed', selection);
-    if (selection === yearSelection) return
-
-    console.log('set year');
-
-    setYearSelection(selection)
-
-    // Default set to range to quarter
-    setRangeSelection('quarter')
-    const options = getQuarterOptions(selection)
-    console.log('Quarter options', options);
-    setRangeItems(options)
-    setSelectedRangeItemIndex(options.length - 1)
-
-    // Process
-    const data = await Bill.getBillsForYear(selection)
-
-    // setBills(data)
-    setBillsForAYear([...data])
-    await updateReport2(selection, 'quarter', options.length - 1, data)
-  }
-
-  const handleRangeSelectionChanged = async (selection: RangeOption) => {
-    if (selection === rangeSelection) return
-    setRangeSelection(selection)
-    let rangeItemIndex = 0
-
-    if (selection === 'month') {
-      const options = getMonthRangeOptions(yearSelection)
-      setRangeItems(options)
-      rangeItemIndex = options.length - 1
-    } else if (selection === 'quarter') {
-      const options = getQuarterOptions(yearSelection)
-      setRangeItems(options)
-      rangeItemIndex = options.length - 1
-    } else if (selection === 'year') {
-      setRangeItems([`${yearSelection}`])
-      rangeItemIndex = 0
+    let cancelled = false
+    setLoading(true)
+    setError("")
+    listBillsForYear(year)
+      .then((data) => {
+        if (!cancelled) setBills(data)
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e))
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
     }
+  }, [year])
 
-    setSelectedRangeItemIndex(rangeItemIndex)
+  const rangeOptions = useMemo(() => rangeOptionsFor(year, kind), [year, kind])
+  const effectiveRangeIndex =
+    rangeIndex === -1 ? rangeOptions.length - 1 : rangeIndex
+  const selectedRange = rangeOptions[effectiveRangeIndex] ?? rangeOptions[0]
 
-    await updateReport2(yearSelection, selection, rangeItemIndex, billsForAYear)
+  const billsInRange = useMemo(
+    () => (selectedRange ? filterBillsInRange(bills, selectedRange) : []),
+    [bills, selectedRange]
+  )
+  const breakdown = useMemo(
+    () => paymentBreakdown(billsInRange, payments),
+    [billsInRange, payments]
+  )
+  const total = useMemo(() => totalSum(billsInRange), [billsInRange])
 
-  }
-
-
-  const handleRangeItemSelected = async (selection: string, index: number) => {
-    console.log('Handle range item selected');
-    console.log(index);
-    if (index === selectedRangeItemIndex) return 
-    setSelectedRangeItemIndex(index)
-
-    await updateReport2(yearSelection, rangeSelection, index, billsForAYear)
-  }
+  const yearOptions = useMemo(() => {
+    const current = new Date().getFullYear()
+    const start = Math.min(earliestBillYear, current)
+    return Array.from({ length: current - start + 1 }, (_, i) => current - i)
+  }, [earliestBillYear])
 
   return (
-    <div className="p-3">
-      <h2>Bill Dashboard</h2>
-      <div id="timeline-bar" className="d-flex flex-column flex-sm-row w-100">
-        <div className="d-flex flex-shrink-1 me-2 mb-2">
-          <div className="dropdown d-flex flex-column w-xs-50">
-            <label className="dropdown">Year</label>
-            <button className="btn clear-hover dropdown-toggle me-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-              {yearSelection}
-            </button>
-            <div className="dropdown-menu">
-              {getYearOptions(Bill.YEAR_INITAL).map((year) => {
-                return <button className="dropdown-item" type="button" onClick={() => handleYearSelectionChanged(year)}>{year}</button>
-              })}
-            </div>
-          </div>
-          <div className="dropdown d-flex flex-column">
-            <label className="dropdown">Range</label>
-            <button className="btn clear-hover dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-              {uppercaseFirst(rangeSelection)}
-            </button>
-            <div className="dropdown-menu">
-              <button className="dropdown-item" type="button" onClick={() => handleRangeSelectionChanged('month')}>Month</button>
-              <button className="dropdown-item" type="button" onClick={() => handleRangeSelectionChanged('quarter')}>Quarter</button>
-              <button className="dropdown-item" type="button" onClick={() => handleRangeSelectionChanged('year')}>Year</button>
-            </div>
-          </div>
-        </div>
-        <div className="horizontal-scrollable-container mb-2 justify-content-start align-items-end">
-            {rangeItems.map((item, i) => {
-              let className = "range-item"
-              if (i === selectedRangeItemIndex)
-                className = "range-item highlight"
-              return <button className={className} onClick={() => handleRangeItemSelected(item, i)}>{item}</button>
-            })}
-        </div>
-      </div>
-      <hr />
-      {pageState.reportLoading && <LinearProgress className="main-color"/>}
-      <div id="information_report_container">
-        <h4>{rangeItems[selectedRangeItemIndex]}</h4>
-        <Stack spacing={1}>
-          {Object.keys(paymentReport).map((key) => {
-            return <span><b>{key}</b>: ${(paymentReport[key].toLocaleString())}</span>
-          })}
-        </Stack>
-      </div>
-      <hr />
-      <div id="bills_container">
-        <div id="bills_bar" className="d-flex flex-row justify-content-between ">
-          <Stack direction={'row'} spacing={1} justifyContent={'center'} alignItems={'center'}>
-            <h4 className="mt-2">Bills</h4>
-            <button className="clear-hover" onClick={() => navigate('/bill/new')}>
-              + New Bill
-            </button>
+    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1200, mx: "auto" }}>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        spacing={1.5}
+        sx={{ mb: 2 }}
+      >
+        <Typography variant="h2">Bills</Typography>
+        {!isMobile && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate("/bill/new")}
+          >
+            New bill
+          </Button>
+        )}
+      </Stack>
+
+      <Paper sx={{ p: { xs: 1.5, md: 2 }, mb: 2 }}>
+        <Stack spacing={1.5}>
+          <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+            <TextField
+              select
+              label="Year"
+              value={year}
+              size="small"
+              sx={{ minWidth: 100 }}
+              onChange={(e) =>
+                dispatch({ type: "setYear", year: Number(e.target.value) })
+              }
+            >
+              {yearOptions.map((y) => (
+                <MenuItem key={y} value={y}>
+                  {y}
+                </MenuItem>
+              ))}
+            </TextField>
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={kind}
+              onChange={(_, v: RangeKind | null) =>
+                v && dispatch({ type: "setKind", kind: v })
+              }
+            >
+              <ToggleButton value="month">Month</ToggleButton>
+              <ToggleButton value="quarter">Quarter</ToggleButton>
+              <ToggleButton value="year">Year</ToggleButton>
+            </ToggleButtonGroup>
           </Stack>
-          <div className="d-flex flex-row">
-            {/* <div className="dropdown">
-              <button className="btn clear-hover dropdown-toggle me-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                Payment
-              </button>
-              <ul className="dropdown-menu">
-                <li><button className="dropdown-item" type="button">Dropdown item</button></li>
-                <li><button className="dropdown-item" type="button">Dropdown item</button></li>
-                <li><button className="dropdown-item" type="button">Dropdown item</button></li>
-              </ul>
-            </div>  
-            <div className="dropdown">
-              <button className="btn clear-hover dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                Supplier
-              </button>
-              <ul className="dropdown-menu">
-                <li><button className="dropdown-item" type="button">Dropdown item</button></li>
-                <li><button className="dropdown-item" type="button">Dropdown item</button></li>
-                <li><button className="dropdown-item" type="button">Dropdown item</button></li>
-              </ul>
-            </div> */}
-          </div>
-        </div>
-        <div>
-          <TableContainer component={Paper}>
-            <Table sx={{ minWidth: 650, tableLayout: 'auto' }} aria-label="simple table">
+          <Box
+            sx={{
+              display: "flex",
+              gap: 1,
+              flexWrap: { xs: "nowrap", md: "wrap" },
+              overflowX: { xs: "auto", md: "visible" },
+              pb: { xs: 0.5, md: 0 },
+              // hide scrollbar on mobile
+              "&::-webkit-scrollbar": { display: "none" },
+              scrollbarWidth: "none",
+            }}
+          >
+            {rangeOptions.map((opt, i) => (
+              <Chip
+                key={opt.label}
+                label={opt.label}
+                color={i === effectiveRangeIndex ? "primary" : "default"}
+                onClick={() => dispatch({ type: "setRangeIndex", index: i })}
+                sx={{ borderRadius: 1.5, flexShrink: 0 }}
+              />
+            ))}
+          </Box>
+        </Stack>
+      </Paper>
+
+      {loading && <LinearProgress sx={{ mb: 2 }} />}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mb: 2 }}>
+        <Card sx={{ flex: 1, minWidth: 0 }}>
+          <CardContent>
+            <Typography variant="overline" color="text.secondary">
+              {selectedRange?.label ?? ""} total
+            </Typography>
+            <Typography variant="h4" sx={{ mt: 1 }}>
+              {formatMoney(total)}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              {billsInRange.length} bill{billsInRange.length === 1 ? "" : "s"}
+            </Typography>
+          </CardContent>
+        </Card>
+        <Card sx={{ flex: 2, minWidth: 0 }}>
+          <CardContent>
+            <Typography variant="overline" color="text.secondary">
+              Payment breakdown
+            </Typography>
+            {breakdown.length === 0 ? (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 3, textAlign: "center" }}
+              >
+                No bills in this range yet.
+              </Typography>
+            ) : (
+              <Box sx={{ width: "100%", height: 220, mt: 1 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={breakdown}
+                    margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                    <YAxis
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(v) =>
+                        v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`
+                      }
+                    />
+                    <RechartsTooltip
+                      formatter={((v: number) => formatMoney(v)) as any}
+                      cursor={{ fill: "rgba(54, 57, 76, 0.05)" }}
+                    />
+                    <Bar dataKey="total" fill={BRAND_PRIMARY} radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+      </Stack>
+
+      {isMobile ? (
+        <Stack spacing={1}>
+          {billsInRange.length === 0 && !loading && (
+            <Paper sx={{ p: 4, textAlign: "center" }}>
+              <Typography variant="body2" color="text.secondary">
+                No bills in this range.
+              </Typography>
+            </Paper>
+          )}
+          {billsInRange.map((bill) => (
+            <BillCard
+              key={bill.id}
+              bill={bill}
+              supplierName={supplierName(bill.supplier_id)}
+              outletName={outletName(bill.outlet_id)}
+              paymentName={paymentName(bill.payment_bank_id)}
+              onClick={() => navigate(`/bill/${bill.id}/edit`)}
+            />
+          ))}
+        </Stack>
+      ) : (
+        <Paper sx={{ overflow: "hidden" }}>
+          <TableContainer>
+            <Table size="small">
               <TableHead>
                 <TableRow>
                   <TableCell>Date</TableCell>
-                  <TableCell align="left">Supplier</TableCell>
-                  <TableCell align="left">Outlet</TableCell>
-                  <TableCell align="left">Payment</TableCell>
-                  <TableCell align="right">Total&nbsp;($)</TableCell>
+                  <TableCell>Supplier</TableCell>
+                  <TableCell>Outlet</TableCell>
+                  <TableCell>Payment</TableCell>
+                  <TableCell align="right">Total</TableCell>
                   <TableCell align="right">Status</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {billsForReport.map((bill) => (
+                {billsInRange.length === 0 && !loading && (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        No bills in this range.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+                {billsInRange.map((bill) => (
                   <TableRow
                     key={bill.id}
-                    onClick={() => {navigate(`/bill/${bill.id}/edit`)}}
-                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                    hover
+                    onClick={() => navigate(`/bill/${bill.id}/edit`)}
+                    sx={{ cursor: "pointer" }}
                   >
-                    <TableCell component="th" scope="row" width={20}>
-                      {bill.payment_date.toLocaleDateString('en-GB')}
+                    <TableCell>
+                      {bill.payment_date.toLocaleDateString("en-GB")}
                     </TableCell>
-                    <TableCell component="th" scope="row" align="left" width={200}>{bill.supplier_name}</TableCell>
-                    <TableCell component="th" scope="row" align="left" width={200}>{bill.outlet_name}</TableCell>
-                    <TableCell component="th" scope="row" align="left" width={300}>
-                      {`${bill.payment_name}`}
+                    <TableCell>{supplierName(bill.supplier_id)}</TableCell>
+                    <TableCell>{outletName(bill.outlet_id)}</TableCell>
+                    <TableCell>{paymentName(bill.payment_bank_id)}</TableCell>
+                    <TableCell align="right">
+                      {formatMoney(bill.total_payment)}
                     </TableCell>
-                    <TableCell align="right">${bill.total_payment}</TableCell>
-                    <TableCell align="right">{bill.payment_status}</TableCell>
+                    <TableCell align="right">
+                      <Chip
+                        label={bill.payment_status}
+                        size="small"
+                        color={
+                          bill.payment_status === "paid" ? "success" : "warning"
+                        }
+                        variant="outlined"
+                      />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
-        </div>
-      </div>
-    </div>
+        </Paper>
+      )}
+
+      <MobileFab
+        onClick={() => navigate("/bill/new")}
+        icon={<AddIcon />}
+        label="New bill"
+      />
+    </Box>
   )
 }
-
-const getMonthRangeOptions = (year: number) => getMonthsOfYear(year)
-const getYearOptions = (yearInitial: number) => {
-  const currentDate = new Date();
-  const currentYear = currentDate.getFullYear();
-  const years = [];
-  
-  for (let i = currentYear; i >= yearInitial; i--) {
-    years.push(i);
-  }
-
-  return years
-}
-
-const getQuarterOptions = (year: number) => {
-  const currentDate = new Date();
-  let currentQuarter = getQuarterFor(11)
-
-  const currentYear = currentDate.getFullYear();
-  if (currentYear === year) {
-    const currentMonth = currentDate.getMonth();
-    currentQuarter = getQuarterFor(currentMonth)
-  } else {
-    currentQuarter = getQuarterFor(11)
-  }
-  
-  const quarters = [];
-
-  for (let i = 0; i <= currentQuarter; i++) {
-    quarters.push(`${year} Q${i + 1}`);
-  }
-
-  return quarters
-
-  console.log(quarters);
-}
-
-type RangeOption = 'month' | 'quarter' | 'year'
